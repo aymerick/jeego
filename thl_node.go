@@ -61,7 +61,7 @@ func (node *ThlNode) handleData(data []byte) {
 	}
 }
 
-func (node *ThlNode) dump() {
+func (node *ThlNode) dumpData() {
 	log.Printf("Node %d - %s:", node.Id, node.Name)
 	log.Printf("  Temperature: %f", node.Temperature)
 	log.Printf("  Humidity: %d", node.Humidity)
