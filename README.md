@@ -1,4 +1,4 @@
 jeego
 =====
 
-Monitoring my house with Jeenode sensors and Go lang
+House monitoring with Jeenode sensors and Go lang
