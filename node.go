@@ -1,11 +1,11 @@
 package main
 
 type Node struct {
-    Id   byte
-    Name string
+	Id   byte
+	Name string
 }
 
 type INode interface {
-    handleData(data []byte)
-    dump()
+	handleData(data []byte)
+	dump()
 }
