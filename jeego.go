@@ -23,6 +23,7 @@ func main() {
 		if line != "" {
 			log.Printf("Received: %s", line)
 
+
 			// parse node id and data
 			nodeId, data, err := parseLine(line)
 			if err == nil {
@@ -33,7 +34,7 @@ func main() {
 					node.handleData(data)
 
 					// debug
-					node.dump()
+					node.dumpData()
 				} else {
 					// unknown node
 					log.Printf("Ignoring unknown node: %v", nodeId)
