@@ -1,5 +1,5 @@
 //
-// Chezak Node - Temperature Humidity Light
+// Jeego Node - Temperature Humidity Light
 //
 // Sensors:
 //  - DHT22 for temperature and humidity
