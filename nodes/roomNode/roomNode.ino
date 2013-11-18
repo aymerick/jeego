@@ -1,3 +1,14 @@
+//
+// Chezak Node - Jeelabs official Room Board (http://jeelabs.com/products/room-board)
+//
+// Original sketch: https://github.com/jcw/jeelib/blob/master/examples/RF12/roomNode/roomNode.ino
+//
+// Sensors:
+//  - SHT11 for temperature and humidity
+//  - LDR for light
+//  - PIR for motion
+//
+
 /// @dir roomNode
 /// New version of the Room Node (derived from rooms.pde).
 // 2010-10-19 <jc@wippler.nl> http://opensource.org/licenses/mit-license.php
@@ -65,39 +76,32 @@ struct {
 #endif
 
 #if PIR_PORT
-    #define PIR_HOLD_TIME   30  // hold PIR value this many seconds after change
-    #define PIR_PULLUP      1   // set to one to pull-up the PIR input pin
-    #define PIR_INVERTED    1   // 0 or 1, to match PIR reporting high or low
+    #define PIR_PULLUP   1 // set to one to pull-up the PIR input pin
+    #define PIR_INVERTED 0 // 0 or 1, to match PIR reporting high or low
 
     /// Interface to a Passive Infrared motion sensor.
     class PIR : public Port {
         volatile byte value, changed;
-        volatile uint32_t lastOn;
+
     public:
         PIR (byte portnum)
-            : Port (portnum), value (0), changed (0), lastOn (0) {}
+            : Port (portnum), value (0), changed (0) {}
 
         // this code is called from the pin-change interrupt handler
         void poll() {
             // see http://talk.jeelabs.net/topic/811#post-4734 for PIR_INVERTED
             byte pin = digiRead() ^ PIR_INVERTED;
-            // if the pin just went on, then set the changed flag to report it
-            if (pin) {
-                if (!state())
-                    changed = 1;
-                lastOn = millis();
-            }
+
+            // if the pin changed then set the changed flag to report it
+            if (pin != state())
+                changed = 1;
+
             value = pin;
         }
 
         // state is true if curr value is still on or if it was on recently
         byte state() const {
             byte f = value;
-            if (lastOn > 0)
-                ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-                    if (millis() - lastOn < 1000 * PIR_HOLD_TIME)
-                        f = 1;
-                }
             return f;
         }
 
@@ -150,35 +154,38 @@ static void doMeasure() {
 
     payload.lobat = rf12_lowbat();
 
-    #if SHT11_PORT
+#if SHT11_PORT
 #ifndef __AVR_ATtiny84__
-        sht11.measure(SHT11::HUMI, shtDelay);
-        sht11.measure(SHT11::TEMP, shtDelay);
-        float h, t;
-        sht11.calculate(h, t);
-        int humi = h + 0.5, temp = 10 * t + 0.5;
+    sht11.measure(SHT11::HUMI, shtDelay);
+    sht11.measure(SHT11::TEMP, shtDelay);
+    float h, t;
+    sht11.calculate(h, t);
+    int humi = h + 0.5, temp = 10 * t + 0.5;
 #else
-        //XXX TINY!
-        int humi = 50, temp = 25;
+    //XXX TINY!
+    int humi = 50, temp = 25;
 #endif
-        payload.humi = smoothedAverage(payload.humi, humi, firstTime);
-        payload.temp = smoothedAverage(payload.temp, temp, firstTime);
-    #endif
-    #if LDR_PORT
-        ldr.digiWrite2(1);  // enable AIO pull-up
-        byte light = ~ ldr.anaRead() >> 2;
-        ldr.digiWrite2(0);  // disable pull-up to reduce current draw
-        payload.light = smoothedAverage(payload.light, light, firstTime);
-    #endif
-    #if PIR_PORT
-        payload.moved = pir.state();
-    #endif
+    payload.humi = smoothedAverage(payload.humi, humi, firstTime);
+    payload.temp = smoothedAverage(payload.temp, temp, firstTime);
+#endif
+
+#if LDR_PORT
+    ldr.digiWrite2(1);  // enable AIO pull-up
+    byte light = ~ ldr.anaRead() >> 2;
+    ldr.digiWrite2(0);  // disable pull-up to reduce current draw
+    payload.light = smoothedAverage(payload.light, light, firstTime);
+#endif
+
+#if PIR_PORT
+    payload.moved = pir.state();
+#endif
 }
 
 static void serialFlush () {
-    #if ARDUINO >= 100
-        Serial.flush();
-    #endif
+#if ARDUINO >= 100
+    Serial.flush();
+#endif
+
     delay(2); // make sure tx buf is empty before going back to sleep
 }
 
@@ -189,29 +196,29 @@ static void doReport() {
     rf12_sendWait(RADIO_SYNC_MODE);
     rf12_sleep(RF12_SLEEP);
 
-    #if SERIAL
-        Serial.print("ROOM ");
-        Serial.print((int) payload.light);
-        Serial.print(' ');
-        Serial.print((int) payload.moved);
-        Serial.print(' ');
-        Serial.print((int) payload.humi);
-        Serial.print(' ');
-        Serial.print((int) payload.temp);
-        Serial.print(' ');
-        Serial.print((int) payload.lobat);
-        Serial.println();
-        serialFlush();
-    #endif
+#if SERIAL
+    Serial.print("ROOM ");
+    Serial.print((int) payload.light);
+    Serial.print(' ');
+    Serial.print((int) payload.moved);
+    Serial.print(' ');
+    Serial.print((int) payload.humi);
+    Serial.print(' ');
+    Serial.print((int) payload.temp);
+    Serial.print(' ');
+    Serial.print((int) payload.lobat);
+    Serial.println();
+    serialFlush();
+#endif
 }
 
 // send packet and wait for ack when there is a motion trigger
 static void doTrigger() {
-    #if DEBUG
-        Serial.print("PIR ");
-        Serial.print((int) payload.moved);
-        serialFlush();
-    #endif
+#if DEBUG
+    Serial.print("PIR ");
+    Serial.print((int) payload.moved);
+    serialFlush();
+#endif
 
     for (byte i = 0; i < RETRY_LIMIT; ++i) {
         rf12_sleep(RF12_WAKEUP);
@@ -221,11 +228,12 @@ static void doTrigger() {
         rf12_sleep(RF12_SLEEP);
 
         if (acked) {
-            #if DEBUG
-                Serial.print(" ack ");
-                Serial.println((int) i);
-                serialFlush();
-            #endif
+#if DEBUG
+            Serial.print(" ack ");
+            Serial.println((int) i);
+            serialFlush();
+#endif
+
             // reset scheduling to start a fresh measurement cycle
             scheduler.timer(MEASURE, MEASURE_PERIOD);
             return;
@@ -234,10 +242,11 @@ static void doTrigger() {
         delay(RETRY_PERIOD * 100);
     }
     scheduler.timer(MEASURE, MEASURE_PERIOD);
-    #if DEBUG
-        Serial.println(" no ack!");
-        serialFlush();
-    #endif
+
+#if DEBUG
+    Serial.println(" no ack!");
+    serialFlush();
+#endif
 }
 
 void blink (byte pin) {
@@ -248,46 +257,45 @@ void blink (byte pin) {
 }
 
 void setup () {
-    #if SERIAL || DEBUG
-        Serial.begin(57600);
-        Serial.print("\n[roomNode.3]");
-        myNodeID = rf12_config();
-        serialFlush();
-    #else
-        myNodeID = rf12_config(0); // don't report info on the serial port
-    #endif
+#if SERIAL || DEBUG
+    Serial.begin(57600);
+    Serial.print("\n[roomNode.3]");
+    myNodeID = rf12_config();
+    serialFlush();
+#else
+    myNodeID = rf12_config(0); // don't report info on the serial port
+#endif
 
     rf12_sleep(RF12_SLEEP); // power down
 
-    #if PIR_PORT
-        pir.digiWrite(PIR_PULLUP);
+#if PIR_PORT
+    pir.digiWrite(PIR_PULLUP);
 #ifdef PCMSK2
-        bitSet(PCMSK2, PIR_PORT + 3);
-        bitSet(PCICR, PCIE2);
+    bitSet(PCMSK2, PIR_PORT + 3);
+    bitSet(PCICR, PCIE2);
 #else
         //XXX TINY!
 #endif
-    #endif
+#endif
 
     reportCount = REPORT_EVERY;     // report right away for easy debugging
     scheduler.timer(MEASURE, 0);    // start the measurement loop going
 }
 
 void loop () {
-    #if DEBUG
-        Serial.print('.');
-        serialFlush();
-    #endif
+#if DEBUG
+    Serial.print('.');
+    serialFlush();
+#endif
 
-    #if PIR_PORT
-        if (pir.triggered()) {
-            payload.moved = pir.state();
-            doTrigger();
-        }
-    #endif
+#if PIR_PORT
+    if (pir.triggered()) {
+        payload.moved = pir.state();
+        doTrigger();
+    }
+#endif
 
     switch (scheduler.pollWaiting()) {
-
         case MEASURE:
             // reschedule these measurements periodically
             scheduler.timer(MEASURE, MEASURE_PERIOD);
