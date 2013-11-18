@@ -7,18 +7,6 @@ import (
     "errors"
 )
 
-// import (
-//     "github.com/tarm/goserial"
-//     "fmt"
-//     "io"
-//     "io/ioutil"
-//     "os"
-//     "log"
-//     "strconv"
-//     "strings"
-//     "encoding/json"
-// )
-
 func main() {
     // @todo configurize that
     nodes := make(map[byte]INode, 2)
