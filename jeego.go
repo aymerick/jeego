@@ -5,9 +5,16 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"os"
+	"runtime"
 )
 
 func main() {
+	log.SetOutput(os.Stderr)
+
+	log.Printf("Jeego - Target OS/Arch: %s %s", runtime.GOOS, runtime.GOARCH)
+	log.Printf("Built with Go Version: %s", runtime.Version())
+
 	// @todo configurize that
 	nodes := make(map[byte]INode, 2)
 	nodes[2] = &RoomNode{Node: Node{2, "RoomNode test"}}
@@ -22,7 +29,6 @@ func main() {
 		line := strings.Trim(sr.readLine(), " \n\r")
 		if line != "" {
 			log.Printf("Received: %s", line)
-
 
 			// parse node id and data
 			nodeId, data, err := parseLine(line)

@@ -4,10 +4,10 @@ import (
 	"github.com/tarm/goserial"
 	"io"
 	"log"
+	"runtime"
 )
 
 const (
-	PORT_NAME = "/dev/tty.usbserial-A1014IM4"
 	PORT_BAUD = 57600
 	LF_CHAR   = 10
 )
@@ -17,8 +17,18 @@ type SerialReader struct {
 }
 
 func NewSerialReader() *SerialReader {
+	defaultPorts := map[string]string {
+		"darwin": "/dev/tty.usbserial-A1014IM4",
+		"linux":  "/dev/ttyUSB0",
+	}
+
 	// @todo Settingfy port
-	conf := &serial.Config{Name: PORT_NAME, Baud: PORT_BAUD}
+	port := defaultPorts[runtime.GOOS]
+	if port == "" {
+		log.Panic("Unsupported plateform")
+	}
+
+	conf := &serial.Config{Name: port, Baud: PORT_BAUD}
 	ser, err := serial.OpenPort(conf)
 	if err != nil {
 		log.Panic(err)
