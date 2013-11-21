@@ -13,4 +13,7 @@ type INode interface {
 
     // Dump node data to STDOUT
 	dumpData()
+
+    // Dump node data as plain text in a string
+    textData() string
 }

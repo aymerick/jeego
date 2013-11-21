@@ -28,6 +28,9 @@ func main() {
 	// instanciate nodes
 	nodes := instanciateNodes(config)
 
+	// launch web server
+	go runWebServer(config, nodes)
+
 	// serial reader
 	sr := NewSerialReader(config.SerialPort, config.SerialBaud)
 
@@ -71,7 +74,7 @@ func instanciateNodes(config *Config) map[byte]INode {
 		case "thlNode":
 			node = &ThlNode{Node: Node{nodeConfig.Id, nodeConfig.Name}}
 		default:
-			log.Panic(fmt.Printf("Unsupported node kind: %s", nodeConfig.Kind))
+			log.Panic("Unsupported node kind: "+ nodeConfig.Kind)
 		}
 
 		result[nodeConfig.Id] = node

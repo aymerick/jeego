@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"strconv"
 )
 
 // Standard room node from jeelabs
@@ -75,10 +76,19 @@ func (node *RoomNode) handleData(data []byte) {
 }
 
 func (node *RoomNode) dumpData() {
-	log.Printf("Node %d - %s:", node.Id, node.Name)
-	log.Printf("  Temperature: %f", node.Temperature)
-	log.Printf("  Humidity: %d", node.Humidity)
-	log.Printf("  Light: %d", node.Light)
-	log.Printf("  Motion: %t", node.Motion)
-	log.Printf("  LowBattery: %t", node.LowBattery)
+	log.Printf(node.textData())
+}
+
+func (node *RoomNode) textData() string {
+	result := ""
+
+	result += node.Name + ":"
+	result += "\n  Temperature: " + strconv.FormatFloat(float64(node.Temperature), 'f', 1, 64)
+	result += "\n  Humidity: " + strconv.Itoa(int(node.Humidity))
+	result += "\n  Light: " + strconv.Itoa(int(node.Light))
+	result += "\n  Motion: " + strconv.FormatBool(node.Motion)
+	result += "\n  LowBattery: " + strconv.FormatBool(node.LowBattery)
+	result += "\n\n"
+
+	return result
 }
