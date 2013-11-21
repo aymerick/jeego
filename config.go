@@ -2,24 +2,24 @@ package main
 
 import (
 	"bytes"
-	"os"
-	"log"
 	"encoding/json"
+	"errors"
 	"io"
+	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
-	"errors"
 	"strings"
 )
 
 type Config struct {
-	SerialPort string 		`json:"serial_port"`
-	SerialBaud int 			`json:"serial_baud"`
-	Nodes 	   []NodeConfig
+	SerialPort string `json:"serial_port"`
+	SerialBaud int    `json:"serial_baud"`
+	Nodes      []NodeConfig
 }
 
 type NodeConfig struct {
-	Id	 byte
+	Id   byte
 	Kind string
 	Name string
 }

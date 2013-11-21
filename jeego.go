@@ -2,12 +2,12 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
-	"strconv"
-	"strings"
 	"os"
 	"runtime"
-	"fmt"
+	"strconv"
+	"strings"
 )
 
 func main() {
