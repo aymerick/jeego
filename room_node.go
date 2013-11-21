@@ -4,6 +4,7 @@ import (
 	"log"
 )
 
+// Standard room node from jeelabs
 type RoomNode struct {
 	Node
 

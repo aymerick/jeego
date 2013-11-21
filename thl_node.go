@@ -4,6 +4,7 @@ import (
 	"log"
 )
 
+// Temperature Humidity Light Node
 type ThlNode struct {
 	Node
 

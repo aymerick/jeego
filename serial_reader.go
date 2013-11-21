@@ -10,10 +10,12 @@ const (
 	LF_CHAR = 10
 )
 
+// Serial port reader
 type SerialReader struct {
 	io.ReadWriteCloser
 }
 
+// Instanciate a serial port reader
 func NewSerialReader(port string, baud int) *SerialReader {
 	conf := &serial.Config{Name: port, Baud: baud}
 	ser, err := serial.OpenPort(conf)
@@ -24,6 +26,7 @@ func NewSerialReader(port string, baud int) *SerialReader {
 	return &SerialReader{ser}
 }
 
+// Read a line from serial port
 func (ser *SerialReader) readLine() string {
 	result := make([]byte, 0)
 	lastRead := make([]byte, 1)
