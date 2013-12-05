@@ -1,0 +1,19 @@
+{
+  "serial_port": "/dev/tty.usbserial-A1014IM4",
+  "domoticz_host": "pikan.local",
+  "domoticz_port": 8080,
+  "nodes": [
+    {
+      "id": 2,
+      "kind": "roomNode",
+      "name": "Bureau Aymerick",
+      "domoticz_idx": "2"
+    },
+    {
+      "id": 3,
+      "kind": "thlNode",
+      "name": "thlNode test",
+      "domoticz_idx": "3"
+    }
+  ]
+}
