@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
 )
 
 func main() {
@@ -29,7 +30,7 @@ func main() {
 	nodes := instanciateNodes(config)
 
 	// launch web server
-	go runWebServer(config, nodes)
+	// go runWebServer(nodes)
 
 	// serial reader
 	sr := NewSerialReader(config.SerialPort, config.SerialBaud)
@@ -52,6 +53,9 @@ func main() {
 
 					// debug
 					node.dumpData()
+
+					// push to domoticz
+					go pushToDomoticz(config, node)
 				} else {
 					// unknown node
 					log.Printf("Ignoring unknown node: %v", nodeId)
@@ -70,9 +74,9 @@ func instanciateNodes(config *Config) map[byte]INode {
 
 		switch nodeConfig.Kind {
 		case "roomNode":
-			node = &RoomNode{Node: Node{nodeConfig.Id, nodeConfig.Name}}
+			node = &RoomNode{Node: Node{nodeConfig.Id, nodeConfig.Name, nodeConfig.DomoticzIdx}}
 		case "thlNode":
-			node = &ThlNode{Node: Node{nodeConfig.Id, nodeConfig.Name}}
+			node = &ThlNode{Node: Node{nodeConfig.Id, nodeConfig.Name, nodeConfig.DomoticzIdx}}
 		default:
 			log.Panic("Unsupported node kind: "+ nodeConfig.Kind)
 		}

@@ -5,7 +5,7 @@ import (
 	"log"
 )
 
-func runWebServer(config *Config, nodes map[byte]INode) {
+func runWebServer(nodes map[byte]INode) {
 	m := martini.Classic()
 
 	m.Get("/", func() string {

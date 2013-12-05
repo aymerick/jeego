@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"strconv"
+	"fmt"
 )
 
 // Temperature Humidity Light Node
@@ -78,4 +79,8 @@ func (node *ThlNode) textData() string {
 	result += "\n\n"
 
 	return result
+}
+
+func (node *ThlNode) domoticzValue() string {
+    return fmt.Sprintf("%.1f;%d;0", node.Temperature, node.Humidity)
 }

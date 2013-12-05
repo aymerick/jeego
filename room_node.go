@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"strconv"
+	"fmt"
 )
 
 // Standard room node from jeelabs
@@ -91,4 +92,8 @@ func (node *RoomNode) textData() string {
 	result += "\n\n"
 
 	return result
+}
+
+func (node *RoomNode) domoticzValue() string {
+    return fmt.Sprintf("%.1f;%d;0", node.Temperature, node.Humidity)
 }
