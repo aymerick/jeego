@@ -17,6 +17,7 @@ type Config struct {
 	SerialBaud   int    	  `json:"serial_baud"`
 	DomoticzHost string 	  `json:"domoticz_host"`
 	DomoticzPort int 	  	  `json:"domoticz_port"`
+	Debug 	     bool		  `json:"debug"`
 	Nodes        []NodeConfig `json:"nodes"`
 }
 
@@ -33,6 +34,7 @@ const defaultConfig = `
 	"serial_port": "/dev/ttyUSB0",
 	"serial_baud": 57600,
 	"domoticz_port": 8080,
+	"debug": false,
 	"nodes": [ ]
 }
 `

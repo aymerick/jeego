@@ -40,7 +40,9 @@ func pushToDomoticz(config *Config, node INode) {
             //
             // With these sensor type the data will be reported as type "Temp + Humidity" and subtype "Oregon THGN122/123, THGN132, THGR122/228/238/268".
 
-            log.Printf("[%s] Pushing to domoticz: %s", node.name(), url)
+            if config.Debug {
+                log.Printf("[%s] Pushing to domoticz: %s", node.name(), url)
+            }
 
             resp, err := http.Get(url)
             if err != nil {
@@ -51,7 +53,9 @@ func pushToDomoticz(config *Config, node INode) {
                 if err != nil {
                     log.Printf("[%s] Failed to get domoticz response", node.name())
                 } else {
-                    log.Printf("[%s] Domoticz response: %s", node.name(), respText)
+                    if config.Debug {
+                        log.Printf("[%s] Domoticz response: %s", node.name(), respText)
+                    }
                 }
             }
         }

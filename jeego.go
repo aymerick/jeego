@@ -40,7 +40,9 @@ func main() {
 		// read a line and trim it
 		line := strings.Trim(sr.readLine(), " \n\r")
 		if line != "" {
-			log.Printf("Received: %s", line)
+			if config.Debug {
+				log.Printf("Received: %s", line)
+			}
 
 			// parse node id and data
 			nodeId, data, err := parseLine(line)
@@ -52,7 +54,9 @@ func main() {
 					node.handleData(data)
 
 					// debug
-					node.dumpData()
+					if config.Debug {
+						node.dumpData()
+					}
 
 					// push to domoticz
 					go pushToDomoticz(config, node)
