@@ -85,7 +85,7 @@ static void doReport() {
 #endif
 
 #if DEBUG
-    Serial.print("[temphuliNode] ");
+    Serial.print("[thlNode] ");
     Serial.print((int) payload.light);
     Serial.print(' ');
     Serial.print((int) payload.lobat);
@@ -192,7 +192,7 @@ void readDHT22() {
 void setup() {
 #if DEBUG
   Serial.begin(57600);
-  Serial.print("\n[temphuliNode]");
+  Serial.print("\n[thlNode]");
   myNodeID = rf12_config();
   serialFlush();
 #else

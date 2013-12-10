@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-
 )
 
 func main() {
@@ -26,12 +25,11 @@ func main() {
 
 	log.Printf("Jeego config: %+v", config)
 
-	// instanciate nodes
-	nodes := instanciateNodes(config)
-
+	// @todo A better web service
 	// launch web server
-	// go runWebServer(nodes)
+	// go runWebServer(config)
 
+	// @todo Goify serial reader ?
 	// serial reader
 	sr := NewSerialReader(config.SerialPort, config.SerialBaud)
 
@@ -48,14 +46,14 @@ func main() {
 			nodeId, data, err := parseLine(line)
 			if err == nil {
 				// get node
-				node := nodes[nodeId]
+				node := &config.Nodes[nodeId]
 				if node != nil {
 					// handle data
 					node.handleData(data)
 
 					// debug
 					if config.Debug {
-						node.dumpData()
+						log.Printf(node.textData())
 					}
 
 					// push to domoticz
@@ -67,28 +65,6 @@ func main() {
 			}
 		}
 	}
-}
-
-// Instanciate nodes map from config file
-func instanciateNodes(config *Config) map[byte]INode {
-	result := make(map[byte]INode)
-
-	for _, nodeConfig := range config.Nodes {
-		var node INode = nil
-
-		switch nodeConfig.Kind {
-		case "roomNode":
-			node = &RoomNode{Node: Node{nodeConfig.Id, nodeConfig.Name, nodeConfig.DomoticzIdx}}
-		case "thlNode":
-			node = &ThlNode{Node: Node{nodeConfig.Id, nodeConfig.Name, nodeConfig.DomoticzIdx}}
-		default:
-			log.Panic("Unsupported node kind: "+ nodeConfig.Kind)
-		}
-
-		result[nodeConfig.Id] = node
-	}
-
-	return result
 }
 
 // Parse a line received from central node

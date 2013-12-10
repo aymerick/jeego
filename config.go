@@ -13,22 +13,14 @@ import (
 )
 
 type Config struct {
-	SerialPort   string 	  `json:"serial_port"`
-	SerialBaud   int    	  `json:"serial_baud"`
-	DomoticzHost string 	  `json:"domoticz_host"`
-	DomoticzPort int 	  	  `json:"domoticz_port"`
-	Debug 	     bool		  `json:"debug"`
-	Nodes        []NodeConfig `json:"nodes"`
+	SerialPort   string `json:"serial_port"`
+	SerialBaud   int    `json:"serial_baud"`
+	DomoticzHost string `json:"domoticz_host"`
+	DomoticzPort int    `json:"domoticz_port"`
+	Debug        bool   `json:"debug"`
+	Nodes        []Node `json:"nodes"`
 }
 
-type NodeConfig struct {
-	Id   		byte   `json:"id"`
-	Kind 		string `json:"kind"`
-	Name 		string `json:"name"`
-	DomoticzIdx string `json:"domoticz_idx"`
-}
-
-// TODO: "/dev/tty.usbserial-A1014IM4"
 const defaultConfig = `
 {
 	"serial_port": "/dev/ttyUSB0",

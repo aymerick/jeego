@@ -5,13 +5,13 @@ import (
 	"log"
 )
 
-func runWebServer(nodes map[byte]INode) {
+func runWebServer(config *Config) {
 	m := martini.Classic()
 
 	m.Get("/", func() string {
 		result := ""
 
-		for _, node := range nodes {
+		for _, node := range config.Nodes {
 			result += node.textData()
 		}
 
