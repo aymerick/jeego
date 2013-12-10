@@ -46,7 +46,7 @@ func main() {
 			nodeId, data, err := parseLine(line)
 			if err == nil {
 				// get node
-				node := &config.Nodes[nodeId]
+				node := config.NodeForId(nodeId)
 				if node != nil {
 					// handle data
 					node.handleData(data)

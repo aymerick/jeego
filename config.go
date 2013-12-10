@@ -12,15 +12,6 @@ import (
 	"strings"
 )
 
-type Config struct {
-	SerialPort   string `json:"serial_port"`
-	SerialBaud   int    `json:"serial_baud"`
-	DomoticzHost string `json:"domoticz_host"`
-	DomoticzPort int    `json:"domoticz_port"`
-	Debug        bool   `json:"debug"`
-	Nodes        []Node `json:"nodes"`
-}
-
 const defaultConfig = `
 {
 	"serial_port": "/dev/ttyUSB0",
@@ -30,6 +21,26 @@ const defaultConfig = `
 	"nodes": [ ]
 }
 `
+
+type Config struct {
+	SerialPort   string `json:"serial_port"`
+	SerialBaud   int    `json:"serial_baud"`
+	DomoticzHost string `json:"domoticz_host"`
+	DomoticzPort int    `json:"domoticz_port"`
+	Debug        bool   `json:"debug"`
+	Nodes        []Node `json:"nodes"`
+}
+
+// get Node for given id
+func (config *Config) NodeForId(nodeId byte) *Node {
+	for _, node := range config.Nodes {
+		if node.Id == nodeId {
+			return &node
+		}
+	}
+
+	return nil
+}
 
 // borrowed from https://github.com/mitchellh/packer
 func loadConfig() (*Config, error) {
