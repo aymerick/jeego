@@ -8,13 +8,13 @@
       "id": 2,
       "kind": "roomNode",
       "name": "Salon",
-      "domoticz_idx": "2"
+      "domoticz_idx": "10"
     },
     {
       "id": 3,
       "kind": "thlNode",
-      "name": "Bureau Aymerick",
-      "domoticz_idx": "3"
+      "name": "Chambre Parents",
+      "domoticz_idx": "11"
     }
   ]
 }
