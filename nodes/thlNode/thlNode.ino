@@ -20,7 +20,7 @@
 ISR(WDT_vect) { Sleepy::watchdogEvent(); }
 
 
-#define DEBUG 1
+#define DEBUG 0
 #define NOOP 0
 
 // DHT22 Power wire is plugged into jeenode DI03 (arduino: digital 6)
@@ -32,15 +32,22 @@ ISR(WDT_vect) { Sleepy::watchdogEvent(); }
 // LDR wire is plugged into jeenode AIO04
 #define LDR_PORT 4
 
-// how often to report
-#define REPORT_PERIOD 3000
+// how often to report, in minutes
+#define REPORT_PERIOD 5
 
 // set the sync mode to 2 if the fuses are still the Arduino default
 // mode 3 (full powerdown) can only be used with 258 CK startup fuses
 #define RADIO_SYNC_MODE 2
 
+// number of milliseconds to wait for an ack
+#define ACK_TIME 10
 
-// @todo Ack mode !
+// how soon to retry if ACK didn't come in
+#define ACK_RETRY_PERIOD 10
+
+// maximum number of times to retry
+#define ACK_RETRY_LIMIT 5
+
 
 
 static byte myNodeID;
@@ -70,31 +77,87 @@ static void serialFlush () {
   delay(2);
 }
 
-// send payload and optionally report on serial port
-static void doReport() {
-#if !NOOP
+// send payload
+static void sendPayload() {
+  // power up RF
+  rf12_sleep(RF12_WAKEUP);
+
+  // send payload
+  rf12_sendNow(0, &payload, sizeof payload);
+  rf12_sendWait(RADIO_SYNC_MODE);
+
+  // power down RF
+  rf12_sleep(RF12_SLEEP);
+}
+
+// wait a few milliseconds for proper ACK to me, return true if indeed received
+static byte waitForAck() {
+  MilliTimer ackTimer;
+  while (!ackTimer.poll(ACK_TIME)) {
+    if (rf12_recvDone() && rf12_crc == 0 &&
+        // see http://talk.jeelabs.net/topic/811#post-4712
+        rf12_hdr == (RF12_HDR_DST | RF12_HDR_CTL | myNodeID))
+      return 1;
+  }
+  return 0;
+}
+
+// send payload and wait for master node ack
+static void sendPayloadWithAck() {
+  for (byte i = 0; i < ACK_RETRY_LIMIT; ++i) {
     // power up RF
     rf12_sleep(RF12_WAKEUP);
 
     // send payload
-    rf12_sendNow(0, &payload, sizeof payload);
+    rf12_sendNow(RF12_HDR_ACK, &payload, sizeof payload);
     rf12_sendWait(RADIO_SYNC_MODE);
+
+    // wait for ack
+    byte acked = waitForAck();
 
     // power down RF
     rf12_sleep(RF12_SLEEP);
+
+    if (acked) {
+#if DEBUG
+      Serial.print("ack ");
+      Serial.println((int) i);
+      serialFlush();
 #endif
+      return;
+    }
+
+    // If no ack received wait and try again
+    delay(ACK_RETRY_PERIOD * 100);
+  }
 
 #if DEBUG
-    Serial.print("[thlNode] ");
-    Serial.print((int) payload.light);
-    Serial.print(' ');
-    Serial.print((int) payload.lobat);
-    Serial.print(' ');
-    Serial.print((int) payload.humi);
-    Serial.print(' ');
-    Serial.print((int) payload.temp);
-    Serial.println();
-    serialFlush();
+  Serial.println("NO ack !");
+  serialFlush();
+#endif
+}
+
+// send payload and optionally report on serial port
+static void doReport() {
+#if DEBUG
+  Serial.print("[thlNode] ");
+  Serial.print((int) payload.light);
+  Serial.print(' ');
+  Serial.print((int) payload.lobat);
+  Serial.print(' ');
+  Serial.print((int) payload.humi);
+  Serial.print(' ');
+  Serial.print((int) payload.temp);
+  Serial.println();
+  serialFlush();
+#endif
+
+#if !NOOP
+  #if ACK_TIME > 0
+    sendPayloadWithAck();
+  #else
+    sendPayload();
+  #endif
 #endif
 }
 
@@ -166,19 +229,19 @@ void readDHT22() {
       Serial.println("BUS Hung");
       break;
     case DHT_ERROR_NOT_PRESENT:
-      Serial.println("Not Present");
+      Serial.println("Not present");
       break;
     case DHT_ERROR_ACK_TOO_LONG:
-      Serial.println("ACK time out");
+      Serial.println("ACK timeout");
       break;
     case DHT_ERROR_SYNC_TIMEOUT:
-      Serial.println("Sync Timeout");
+      Serial.println("Sync timeout");
       break;
     case DHT_ERROR_DATA_TIMEOUT:
-      Serial.println("Data Timeout");
+      Serial.println("Data timeout");
       break;
     case DHT_ERROR_TOOQUICK:
-      Serial.println("Polled to quick");
+      Serial.println("Polled too quick");
       break;
 #endif
   }
@@ -222,14 +285,10 @@ void loop() {
   // report
   doReport();
 
-  // max value for loseSomeTime() is 60 seconds
-  if (REPORT_PERIOD > 60000) {
-#if DEBUG
-    Serial.print('FIXME - REPORT_PERIOD > 60000');
-    serialFlush();
-#endif
-    exit(1);
+  // sleep
+  for (byte i = 0; i < REPORT_PERIOD; ++i) {
+    // max value is 60 seconds
+    Sleepy::loseSomeTime(60000);
   }
-
-  Sleepy::loseSomeTime(REPORT_PERIOD);
 }
+
