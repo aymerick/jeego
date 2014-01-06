@@ -19,6 +19,7 @@ Update
 $ go get -u github.com/aymerick/jeego
 ```
 
+
 Run
 ===
 
@@ -26,11 +27,26 @@ Run
 $ jeego
 ```
 
-Default conf file is `~/.jeego` but you can change location witg:
+Default conf file is `~/.jeego.json` but you can change location with:
 
 ```bash
 $ JEEGO_CONFIG='<path_to_conf_file>' jeego
 ```
+
+
+Dev
+===
+
+```bash
+$ ln -s ~/Dev/go/src/github.com/aymerick/jeego/.jeego.json ~/
+```
+
+```bash
+$ cd ~/Dev/go/src/github.com/aymerick/jeego
+$ go build
+$ ./jeego
+```
+
 
 Conf file
 =========
@@ -61,10 +77,9 @@ Example:
 }
 ```
 
+
 Nodes kinds
 ===========
 
 - roomNode: Jeelabs official Room Board (http://jeelabs.com/products/room-board)
 - thlNode: "Temperature Humidity Light" with DHT22 and LDR
-
-@todo More Doc !

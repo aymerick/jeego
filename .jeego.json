@@ -7,13 +7,13 @@
     {
       "id": 2,
       "kind": "roomNode",
-      "name": "Bureau Aymerick",
+      "name": "Salon",
       "domoticz_idx": "2"
     },
     {
       "id": 3,
       "kind": "thlNode",
-      "name": "thlNode test",
+      "name": "Bureau Aymerick",
       "domoticz_idx": "3"
     }
   ]

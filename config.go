@@ -101,7 +101,7 @@ func configFile() (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(dir, ".jeego"), nil
+	return filepath.Join(dir, ".jeego.json"), nil
 }
 
 // borrowed from https://github.com/mitchellh/packer
