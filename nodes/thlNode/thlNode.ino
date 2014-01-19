@@ -1,5 +1,5 @@
 //
-// Jeego Node - Temperature Humidity Light
+// Jeego Node - [Jeenode] Temperature Humidity Light
 //
 // Sensors:
 //  - DHT22 for temperature and humidity

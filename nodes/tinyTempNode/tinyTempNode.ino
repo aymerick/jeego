@@ -1,5 +1,5 @@
 //
-// Jeego TinyTX Node (http://nathan.chantrell.net/tinytx-wireless-sensor/)
+// Jeego Node - [TinyTX] Temperature (http://nathan.chantrell.net/tinytx-wireless-sensor/)
 //
 // Original sketch: https://github.com/nathanchantrell/TinyTX/blob/master/TinyTX_DS18B20/TinyTX_DS18B20.ino
 //
@@ -38,7 +38,6 @@
 //   - Try on a stripboard with: http://nathan.chantrell.net/downloads/arduino/tinytx/tinytx_stripboard_ds18b20.png
 //
 //   - If the sketch is stuck during call to rf12_sendWait then Burn Bootloader to fix the issue\
-//
 //
 
 //----------------------------------------------------------------------------------------------------------------------

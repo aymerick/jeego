@@ -1,5 +1,5 @@
 //
-// Jeego Node - Jeelabs official Room Board (http://jeelabs.com/products/room-board)
+// Jeego Node - [Jeenode] Jeelabs official Room Board (http://jeelabs.com/products/room-board)
 //
 // Original sketch: https://github.com/jcw/jeelib/blob/master/examples/RF12/roomNode/roomNode.ino
 //
