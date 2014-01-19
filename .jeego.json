@@ -15,6 +15,12 @@
       "kind": "thlNode",
       "name": "Chambre Parents",
       "domoticz_idx": "11"
+    },
+    {
+      "id": 4,
+      "kind": "thlNode",
+      "name": "Chambre Anouk",
+      "domoticz_idx": "12"
     }
   ]
 }
