@@ -140,7 +140,7 @@ static void sendPayloadWithAck() {
 // send payload and optionally report on serial port
 static void doReport() {
 #if DEBUG
-  Serial.print("[thlNode] ");
+  Serial.print("[jeeThlNode] ");
   Serial.print((int) payload.light);
   Serial.print(' ');
   Serial.print((int) payload.lobat);
@@ -255,7 +255,7 @@ void readDHT22() {
 void setup() {
 #if DEBUG
   Serial.begin(57600);
-  Serial.print("\n[thlNode]");
+  Serial.print("\n[jeeThlNode]");
   myNodeID = rf12_config();
   serialFlush();
 #else

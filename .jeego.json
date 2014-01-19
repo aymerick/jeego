@@ -6,19 +6,19 @@
   "nodes": [
     {
       "id": 2,
-      "kind": "roomNode",
+      "kind": "jeeRoomNode",
       "name": "Salon",
       "domoticz_idx": "10"
     },
     {
       "id": 3,
-      "kind": "thlNode",
+      "kind": "jeeThlNode",
       "name": "Chambre Parents",
       "domoticz_idx": "11"
     },
     {
       "id": 4,
-      "kind": "thlNode",
+      "kind": "jeeThlNode",
       "name": "Chambre Anouk",
       "domoticz_idx": "12"
     }

@@ -63,14 +63,14 @@ Example:
   "nodes": [
     {
       "id": 2,
-      "kind": "roomNode",
+      "kind": "jeeRoomNode",
       "name": "Bureau Aymerick",
       "domoticz_idx": "2"
     },
     {
       "id": 3,
-      "kind": "thlNode",
-      "name": "thlNode test",
+      "kind": "jeeThlNode",
+      "name": "jeeThlNode test",
       "domoticz_idx": "3"
     }
   ]
@@ -81,5 +81,5 @@ Example:
 Nodes kinds
 ===========
 
-- roomNode: Jeelabs official Room Board (http://jeelabs.com/products/room-board)
-- thlNode: "Temperature Humidity Light" with DHT22 and LDR
+- jeeRoomNode: [jeenode] Jeelabs official Room Board (http://jeelabs.com/products/room-board)
+- jeeThlNode: [jeenode] "Temperature Humidity Light" with DHT22 and LDR

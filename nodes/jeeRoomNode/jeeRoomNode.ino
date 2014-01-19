@@ -259,7 +259,7 @@ void blink (byte pin) {
 void setup () {
 #if SERIAL || DEBUG
     Serial.begin(57600);
-    Serial.print("\n[roomNode.3]");
+    Serial.print("\n[jeeRoomNode.3]");
     myNodeID = rf12_config();
     serialFlush();
 #else
