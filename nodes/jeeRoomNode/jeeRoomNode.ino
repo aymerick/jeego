@@ -79,7 +79,7 @@ static byte reportCount;
 // node ID used for this unit
 static byte myNodeID;
 
-// This defines the structure of the packets which get sent out by wireless:
+// serialized payload
 struct {
   byte light;     // light sensor: 0..255
   byte moved :1;  // motion detector: 0..1
@@ -144,19 +144,6 @@ static void serialFlush () {
   delay(2);
 }
 
-// send payload
-static void sendPayload() {
-  // power up RF
-  rf12_sleep(RF12_WAKEUP);
-
-  // send payload
-  rf12_sendNow(0, &payload, sizeof payload);
-  rf12_sendWait(RADIO_SYNC_MODE);
-
-  // power down RF
-  rf12_sleep(RF12_SLEEP);
-}
-
 // wait a few milliseconds for proper ACK to me, return true if indeed received
 static byte waitForAck() {
   MilliTimer ackTimer;
@@ -174,7 +161,7 @@ static byte waitForAck() {
 }
 
 // send payload and wait for master node ack
-static void sendPayloadWithAck() {
+static void sendPayload() {
   for (byte i = 0; i < ACK_RETRY_LIMIT; i++) {
     // power up RF
     rf12_sleep(RF12_WAKEUP);
@@ -202,7 +189,8 @@ static void sendPayloadWithAck() {
       return;
     }
 
-    delay(ACK_RETRY_PERIOD * 100);
+    // if no ack received wait and try again
+    delay(ACK_RETRY_PERIOD * 100);
   }
 
 #if DEBUG
@@ -232,11 +220,7 @@ static void doReport() {
 #endif
 
 #if !NOOP
-  #if ACK_TIME > 0
-    sendPayloadWithAck();
-  #else
-    sendPayload();
-  #endif
+  sendPayload();
 #endif
 }
 
@@ -273,7 +257,7 @@ void readSHT11() {
   sensorSHT11.measure(SHT11::TEMP, shtDelay);
 
   float h, t;
-//  sensorSHT11.calculate(h, t);
+  sensorSHT11.calculate(h, t);
 
   payload.humi = h + 0.5;
   payload.temp = 10 * t + 0.5;

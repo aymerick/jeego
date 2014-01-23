@@ -16,7 +16,7 @@
 #include <DHT22.h>
 #include <avr/sleep.h>
 
-// this must be added since we're using the watchdog for low-power waiting
+// has to be defined because we're using the watchdog for low-power waiting
 ISR(WDT_vect) { Sleepy::watchdogEvent(); }
 
 
@@ -77,19 +77,6 @@ static void serialFlush () {
   delay(2);
 }
 
-// send payload
-static void sendPayload() {
-  // power up RF
-  rf12_sleep(RF12_WAKEUP);
-
-  // send payload
-  rf12_sendNow(0, &payload, sizeof payload);
-  rf12_sendWait(RADIO_SYNC_MODE);
-
-  // power down RF
-  rf12_sleep(RF12_SLEEP);
-}
-
 // wait a few milliseconds for proper ACK to me, return true if indeed received
 static byte waitForAck() {
   MilliTimer ackTimer;
@@ -104,7 +91,7 @@ static byte waitForAck() {
 }
 
 // send payload and wait for master node ack
-static void sendPayloadWithAck() {
+static void sendPayload() {
   for (byte i = 0; i < ACK_RETRY_LIMIT; i++) {
     // power up RF
     rf12_sleep(RF12_WAKEUP);
@@ -154,11 +141,7 @@ static void doReport() {
 #endif
 
 #if !NOOP
-  #if ACK_TIME > 0
-    sendPayloadWithAck();
-  #else
-    sendPayload();
-  #endif
+  sendPayload();
 #endif
 }
 

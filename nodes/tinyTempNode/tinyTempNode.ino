@@ -53,58 +53,74 @@
 // and small change to OneWire library, see: http://arduino.cc/forum/index.php/topic,91491.msg687523.html#msg687523
 //----------------------------------------------------------------------------------------------------------------------
 
+#include <JeeLib.h>            // https://github.com/jcw/jeelib
 #include <OneWire.h>           // http://www.pjrc.com/teensy/arduino_libraries/OneWire.zip
 #include <DallasTemperature.h> // http://download.milesburton.com/Arduino/MaximTemperature/DallasTemperature_LATEST.zip
-#include <JeeLib.h>            // https://github.com/jcw/jeelib
 
-ISR(WDT_vect) { Sleepy::watchdogEvent(); } // interrupt handler for JeeLabs Sleepy power saving
+// has to be defined because we're using the watchdog for low-power waiting
+ISR(WDT_vect) { Sleepy::watchdogEvent(); }
 
 
-#define myNodeID 30       // RF12 node ID in the range 1-30
-#define network 212       // RF12 Network group
-#define freq RF12_868MHZ  // Frequency of RFM12B module
+// RF12 node ID in the range 1-30
+#define myNodeID 30
 
-#define REPORT_PERIOD 5   // How often to report, in minutes
+// RF12 Network group
+#define network 212
+
+// frequency of RFM12B module
+#define freq RF12_868MHZ
+
+// DS18B20 Temperature sensor is connected on D10/ATtiny pin 13
+#define ONE_WIRE_BUS_PIN 10
+
+// DS18B20 Power pin is connected on D9/ATtiny pin 12
+#define ONE_WIRE_POWER_PIN 9
+
+// how often to report, in minutes
+#define REPORT_PERIOD 5
 
 // set the sync mode to 2 if the fuses are still the Arduino default
 // mode 3 (full powerdown) can only be used with 258 CK startup fuses
 #define RADIO_SYNC_MODE 2
 
-#define USE_ACK           // Enable ACKs, comment out to disable
-#define RETRY_PERIOD 5    // How soon to retry (in seconds) if ACK didn't come in
-#define RETRY_LIMIT 5     // Maximum number of times to retry
-#define ACK_TIME 10       // Number of milliseconds to wait for an ack
+// number of milliseconds to wait for an ack
+#define ACK_TIME 10
 
-#define ONE_WIRE_BUS 10   // DS18B20 Temperature sensor is connected on D10/ATtiny pin 13
-#define ONE_WIRE_POWER 9  // DS18B20 Power pin is connected on D9/ATtiny pin 12
+// how soon to retry if ACK didn't come in
+#define ACK_RETRY_PERIOD 10
 
-OneWire oneWire(ONE_WIRE_BUS); // Setup a oneWire instance
-
-DallasTemperature sensors(&oneWire); // Pass our oneWire reference to Dallas Temperature
+// Maximum number of times to retry
+#define ACK_RETRY_LIMIT 5  
 
 
-// Data Structure to be sent
+// serialized payload
 struct {
-  int temp;    // Temperature reading
-  int supplyV; // Supply voltage
+  int temp;    // temperature reading
+  int supplyV; // supply voltage
 } payload;
 
 
-#ifdef USE_ACK
+// sensors
+OneWire oneWire(ONE_WIRE_BUS_PIN);
+DallasTemperature sensors(&oneWire);
+
 
 // wait a few milliseconds for proper ACK to me, return true if indeed received
 static byte waitForAck() {
   MilliTimer ackTimer;
+
   while (!ackTimer.poll(ACK_TIME)) {
+    // see http://talk.jeelabs.net/topic/811#post-4712
     if (rf12_recvDone() && (rf12_crc == 0) && (rf12_hdr == (RF12_HDR_DST | RF12_HDR_CTL | myNodeID)))
       return 1;
   }
+
   return 0;
 }
 
-static void rfwrite(){
-  // tx and wait for ack up to RETRY_LIMIT times
-  for (byte i = 0; i <= RETRY_LIMIT; i++) {
+// send payload and wait for master node ack
+static void sendPayload(){
+  for (byte i = 0; i <= ACK_RETRY_LIMIT; i++) {
     // power up RF
     rf12_sleep(RF12_WAKEUP);
 
@@ -119,29 +135,14 @@ static void rfwrite(){
     rf12_sleep(RF12_SLEEP);
 
     // return if ACK received
-    if (acked) { return; }
+    if (acked) {
+      return;
+    }
 
     // if no ack received wait and try again
-    Sleepy::loseSomeTime(RETRY_PERIOD * 1000);
+    delay(ACK_RETRY_PERIOD * 100);
   }
 }
-
-#else
-
-static void rfwrite(){
-  // power up RF
-  rf12_sleep(RF12_WAKEUP);
-
-  // send payload
-  rf12_sendNow(0, &payload, sizeof payload);
-  rf12_sendWait(RADIO_SYNC_MODE);
-
-  // power down RF
-  rf12_sleep(RF12_SLEEP);
-}
-
-#endif
-
 
 // Read current supply voltage
 long readVcc() {
@@ -177,15 +178,20 @@ long readVcc() {
   return result;
 }
 
+
+//
+// Main
+//
+
 void setup() {
-  // Initialize RFM12 with settings defined above
+  // initialize RFM12
   rf12_initialize(myNodeID, freq, network);
 
-  // Put the RFM12 to sleep
+  // power down RF
   rf12_sleep(0);
 
   // set power pin for DS18B20 to output
-  pinMode(ONE_WIRE_POWER, OUTPUT);
+  pinMode(ONE_WIRE_POWER_PIN, OUTPUT);
 
   // only keep timer 0 going
   PRR = bit(PRTIM1);
@@ -195,31 +201,31 @@ void setup() {
 }
 
 void loop() {
-  // Yurn DS18B20 sensor on
-  digitalWrite(ONE_WIRE_POWER, HIGH);
+  // power on sensor
+  digitalWrite(ONE_WIRE_POWER_PIN, HIGH);
 
-  // Allow 5ms for the sensor to be ready
+  // allow 5ms for the sensor to be ready
   delay(5);
 
-  // Start up temp sensor
+  // start up temp sensor
   sensors.begin();
 
-  // Get the temperature
+  // get the temperature
   sensors.requestTemperatures();
 
-  // Read first sensor and convert to integer, reversed at receiving end
+  // read first sensor and convert to integer, reversed at receiving end
   payload.temp = (sensors.getTempCByIndex(0)*100);
 
-  // Turn DS18B20 off
-  digitalWrite(ONE_WIRE_POWER, LOW);
+  // power off sensor
+  digitalWrite(ONE_WIRE_POWER_PIN, LOW);
 
-  // Get supply voltage
+  // get supply voltage
   payload.supplyV = readVcc();
 
-  // Send data via RF
-  rfwrite();
+  // send data
+  sendPayload();
 
-  // Sleep
+  // sleep
   for (byte i = 0; i < REPORT_PERIOD; i++) {
     // max value is 60 seconds
     Sleepy::loseSomeTime(60000);
