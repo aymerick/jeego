@@ -104,7 +104,7 @@ static byte waitForAck() {
 
 // send payload and wait for master node ack
 static void sendPayloadWithAck() {
-  for (byte i = 0; i < ACK_RETRY_LIMIT; ++i) {
+  for (byte i = 0; i < ACK_RETRY_LIMIT; i++) {
     // power up RF
     rf12_sleep(RF12_WAKEUP);
 
@@ -286,7 +286,7 @@ void loop() {
   doReport();
 
   // sleep
-  for (byte i = 0; i < REPORT_PERIOD; ++i) {
+  for (byte i = 0; i < REPORT_PERIOD; i++) {
     // max value is 60 seconds
     Sleepy::loseSomeTime(60000);
   }

@@ -220,7 +220,7 @@ static void doTrigger() {
     serialFlush();
 #endif
 
-    for (byte i = 0; i < RETRY_LIMIT; ++i) {
+    for (byte i = 0; i < RETRY_LIMIT; i++) {
         rf12_sleep(RF12_WAKEUP);
         rf12_sendNow(RF12_HDR_ACK, &payload, sizeof payload);
         rf12_sendWait(RADIO_SYNC_MODE);
@@ -250,7 +250,7 @@ static void doTrigger() {
 }
 
 void blink (byte pin) {
-    for (byte i = 0; i < 6; ++i) {
+    for (byte i = 0; i < 6; i++) {
         delay(100);
         digitalWrite(pin, !digitalRead(pin));
     }

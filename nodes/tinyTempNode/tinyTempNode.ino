@@ -63,6 +63,8 @@ ISR(WDT_vect) { Sleepy::watchdogEvent(); } // interrupt handler for JeeLabs Slee
 #define network 212       // RF12 Network group
 #define freq RF12_868MHZ  // Frequency of RFM12B module
 
+#define REPORT_PERIOD 5   // How often to report, in minutes
+
 #define USE_ACK           // Enable ACKs, comment out to disable
 #define RETRY_PERIOD 5    // How soon to retry (in seconds) if ACK didn't come in
 #define RETRY_LIMIT 5     // Maximum number of times to retry
@@ -100,7 +102,7 @@ static byte waitForAck() {
 
 static void rfwrite(){
   // tx and wait for ack up to RETRY_LIMIT times
-  for (byte i = 0; i <= RETRY_LIMIT; ++i) {
+  for (byte i = 0; i <= RETRY_LIMIT; i++) {
     // Wake up RF module
     rf12_sleep(-1);
 
@@ -211,6 +213,9 @@ void loop() {
   // Send data via RF
   rfwrite();
 
-  // JeeLabs power save function: enter low power mode for 60 seconds (valid range 16-65000 ms)
-  Sleepy::loseSomeTime(60000);
+  // Sleep
+  for (byte i = 0; i < REPORT_PERIOD; i++) {
+    // max value is 60 seconds
+    Sleepy::loseSomeTime(60000);
+  }
 }
