@@ -59,11 +59,16 @@
 
 ISR(WDT_vect) { Sleepy::watchdogEvent(); } // interrupt handler for JeeLabs Sleepy power saving
 
+
 #define myNodeID 30       // RF12 node ID in the range 1-30
 #define network 212       // RF12 Network group
 #define freq RF12_868MHZ  // Frequency of RFM12B module
 
 #define REPORT_PERIOD 5   // How often to report, in minutes
+
+// set the sync mode to 2 if the fuses are still the Arduino default
+// mode 3 (full powerdown) can only be used with 258 CK startup fuses
+#define RADIO_SYNC_MODE 2
 
 #define USE_ACK           // Enable ACKs, comment out to disable
 #define RETRY_PERIOD 5    // How soon to retry (in seconds) if ACK didn't come in
@@ -79,51 +84,44 @@ DallasTemperature sensors(&oneWire); // Pass our oneWire reference to Dallas Tem
 
 
 // Data Structure to be sent
-typedef struct {
+struct {
   int temp;    // Temperature reading
   int supplyV; // Supply voltage
-} Payload;
-
-Payload tinytx;
+} payload;
 
 
 #ifdef USE_ACK
 
-// Wait a few milliseconds for proper ACK
+// wait a few milliseconds for proper ACK to me, return true if indeed received
 static byte waitForAck() {
   MilliTimer ackTimer;
   while (!ackTimer.poll(ACK_TIME)) {
-    if (rf12_recvDone() && rf12_crc == 0 &&
-      rf12_hdr == (RF12_HDR_DST | RF12_HDR_CTL | myNodeID))
+    if (rf12_recvDone() && (rf12_crc == 0) && (rf12_hdr == (RF12_HDR_DST | RF12_HDR_CTL | myNodeID)))
       return 1;
-    }
+  }
   return 0;
 }
 
 static void rfwrite(){
   // tx and wait for ack up to RETRY_LIMIT times
   for (byte i = 0; i <= RETRY_LIMIT; i++) {
-    // Wake up RF module
-    rf12_sleep(-1);
+    // power up RF
+    rf12_sleep(RF12_WAKEUP);
 
-    while (!rf12_canSend())
-      rf12_recvDone();
+    // send payload
+    rf12_sendNow(RF12_HDR_ACK, &payload, sizeof payload);
+    rf12_sendWait(RADIO_SYNC_MODE);
 
-    rf12_sendStart(RF12_HDR_ACK, &tinytx, sizeof tinytx);
-
-    // Wait for RF to finish sending while in standby mode
-    rf12_sendWait(2);
-
-    // Wait for ACK
+    // wait for ack
     byte acked = waitForAck();
 
-    // Put RF module to sleep
-    rf12_sleep(0);
+    // power down RF
+    rf12_sleep(RF12_SLEEP);
 
-    // Return if ACK received
+    // return if ACK received
     if (acked) { return; }
 
-    // If no ack received wait and try again
+    // if no ack received wait and try again
     Sleepy::loseSomeTime(RETRY_PERIOD * 1000);
   }
 }
@@ -131,44 +129,52 @@ static void rfwrite(){
 #else
 
 static void rfwrite(){
-  // Wake up RF module
-  rf12_sleep(-1);
+  // power up RF
+  rf12_sleep(RF12_WAKEUP);
 
-  while (!rf12_canSend())
-    rf12_recvDone();
+  // send payload
+  rf12_sendNow(0, &payload, sizeof payload);
+  rf12_sendWait(RADIO_SYNC_MODE);
 
-  rf12_sendStart(0, &tinytx, sizeof tinytx);
-
-  // Wait for RF to finish sending while in standby mode
-  rf12_sendWait(2);
-
-  // Put RF module to sleep
-  rf12_sleep(0);
-
-  return;
+  // power down RF
+  rf12_sleep(RF12_SLEEP);
 }
 
 #endif
 
 
 // Read current supply voltage
- long readVcc() {
-   bitClear(PRR, PRADC); ADCSRA |= bit(ADEN); // Enable the ADC
-   long result;
-   // Read 1.1V reference against Vcc
-   #if defined(__AVR_ATtiny84__)
-    ADMUX = _BV(MUX5) | _BV(MUX0); // For ATtiny84
-   #else
-    ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);  // For ATmega328
-   #endif
-   delay(2); // Wait for Vref to settle
-   ADCSRA |= _BV(ADSC); // Convert
-   while (bit_is_set(ADCSRA,ADSC));
-   result = ADCL;
-   result |= ADCH<<8;
-   result = 1126400L / result; // Back-calculate Vcc in mV
-   ADCSRA &= ~ bit(ADEN); bitSet(PRR, PRADC); // Disable the ADC to save power
-   return result;
+long readVcc() {
+  long result;
+
+  // Enable the ADC
+  bitClear(PRR, PRADC); ADCSRA |= bit(ADEN);
+
+  // Read 1.1V reference against Vcc
+#if defined(__AVR_ATtiny84__)
+  // For ATtiny84
+  ADMUX = _BV(MUX5) | _BV(MUX0);
+#else
+  // For ATmega328
+  ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+#endif
+
+  delay(2); // Wait for Vref to settle
+
+  // Convert
+  ADCSRA |= _BV(ADSC);
+  while (bit_is_set(ADCSRA,ADSC));
+
+  result = ADCL;
+  result |= ADCH<<8;
+
+  // Back-calculate Vcc in mV
+  result = 1126400L / result;
+
+  // Disable the ADC to save power
+  ADCSRA &= ~ bit(ADEN); bitSet(PRR, PRADC);
+
+  return result;
 }
 
 void setup() {
@@ -189,26 +195,26 @@ void setup() {
 }
 
 void loop() {
-  // turn DS18B20 sensor on
+  // Yurn DS18B20 sensor on
   digitalWrite(ONE_WIRE_POWER, HIGH);
 
-  //Sleepy::loseSomeTime(5); // Allow 5ms for the sensor to be ready
-  delay(5); // The above doesn't seem to work for everyone (why?)
+  // Allow 5ms for the sensor to be ready
+  delay(5);
 
-  //start up temp sensor
+  // Start up temp sensor
   sensors.begin();
 
   // Get the temperature
   sensors.requestTemperatures();
 
   // Read first sensor and convert to integer, reversed at receiving end
-  tinytx.temp = (sensors.getTempCByIndex(0)*100);
+  payload.temp = (sensors.getTempCByIndex(0)*100);
 
-  // turn DS18B20 off
+  // Turn DS18B20 off
   digitalWrite(ONE_WIRE_POWER, LOW);
 
   // Get supply voltage
-  tinytx.supplyV = readVcc();
+  payload.supplyV = readVcc();
 
   // Send data via RF
   rfwrite();

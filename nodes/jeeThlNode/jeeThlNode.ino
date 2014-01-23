@@ -49,7 +49,6 @@ ISR(WDT_vect) { Sleepy::watchdogEvent(); }
 #define ACK_RETRY_LIMIT 5
 
 
-
 static byte myNodeID;
 
 // serialized payload
@@ -60,6 +59,7 @@ struct {
   int  temp  :10; // temperature: -512..+512 (tenths)
 } payload;
 
+// sensors
 DHT22 sensorDHT22(DHT22_DATA_PIN);
 Port  sensorLDR(LDR_PORT);
 
@@ -93,12 +93,13 @@ static void sendPayload() {
 // wait a few milliseconds for proper ACK to me, return true if indeed received
 static byte waitForAck() {
   MilliTimer ackTimer;
+
   while (!ackTimer.poll(ACK_TIME)) {
-    if (rf12_recvDone() && rf12_crc == 0 &&
-        // see http://talk.jeelabs.net/topic/811#post-4712
-        rf12_hdr == (RF12_HDR_DST | RF12_HDR_CTL | myNodeID))
+    // see http://talk.jeelabs.net/topic/811#post-4712
+    if (rf12_recvDone() && (rf12_crc == 0) && (rf12_hdr == (RF12_HDR_DST | RF12_HDR_CTL | myNodeID)))
       return 1;
   }
+
   return 0;
 }
 
@@ -120,7 +121,7 @@ static void sendPayloadWithAck() {
 
     if (acked) {
 #if DEBUG
-      Serial.print("ack ");
+      Serial.print(" ack");
       Serial.println((int) i);
       serialFlush();
 #endif
@@ -132,7 +133,7 @@ static void sendPayloadWithAck() {
   }
 
 #if DEBUG
-  Serial.println("NO ack !");
+  Serial.println(" no ack!");
   serialFlush();
 #endif
 }
@@ -140,7 +141,7 @@ static void sendPayloadWithAck() {
 // send payload and optionally report on serial port
 static void doReport() {
 #if DEBUG
-  Serial.print("[jeeThlNode] ");
+  Serial.print("jeeThlNode ");
   Serial.print((int) payload.light);
   Serial.print(' ');
   Serial.print((int) payload.lobat);
@@ -268,12 +269,6 @@ void setup() {
 
   // set output mode for DHT22 power pin
   pinMode(DHT22_POWER_PIN, OUTPUT);
-
-  // init payload
-  payload.light = 0;
-  payload.lobat = 0;
-  payload.humi  = 0;
-  payload.temp  = 0;
 }
 
 void loop() {
