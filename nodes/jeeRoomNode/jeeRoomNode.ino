@@ -1,24 +1,14 @@
 //
 // Jeego Node - [Jeenode] Jeelabs official Room Board (http://jeelabs.com/products/room-board)
 //
-// Original sketch: https://github.com/jcw/jeelib/blob/master/examples/RF12/roomNode/roomNode.ino
-//
 // Sensors:
 //  - SHT11 for temperature and humidity
 //  - LDR for light
 //  - PIR for motion
 //
-
-/// @dir roomNode
-/// New version of the Room Node (derived from rooms.pde).
-// 2010-10-19 <jc@wippler.nl> http://opensource.org/licenses/mit-license.php
-
-// see http://jeelabs.org/2010/10/20/new-roomnode-code/
-// and http://jeelabs.org/2010/10/21/reporting-motion/
-
-// The complexity in the code below comes from the fact that newly detected PIR
-// motion needs to be reported as soon as possible, but only once, while all the
-// other sensor values are being collected and averaged in a more regular cycle.
+// + Jeenode design by JC Wippler: http://jeelabs.net/projects/hardware/wiki/JeeNode
+// + Original sketch: https://github.com/jcw/jeelib/blob/master/examples/RF12/roomNode/roomNode.ino
+//
 
 #include <JeeLib.h>
 #include <PortsSHT11.h>
@@ -84,7 +74,7 @@ struct {
   byte light;     // light sensor: 0..255
   byte moved :1;  // motion detector: 0..1
   byte humi  :7;  // humidity: 0..100
-  int temp   :10; // temperature: -500..+500 (tenths)
+  int  temp  :10; // temperature: -500..+500 (tenths)
   byte lobat :1;  // supply voltage dropped under 3.1V: 0..1
 } payload;
 
@@ -102,8 +92,9 @@ class PIR : public Port {
       byte pin = digiRead() ^ PIR_INVERTED;
 
       // if the pin changed then set the changed flag to report it
-      if (pin != state())
-          changed = 1;
+      if (pin != state()) {
+        changed = 1;
+      }
 
       value = pin;
     }
@@ -114,8 +105,8 @@ class PIR : public Port {
       return f;
     }
 
-    // return true if there is new motion to report
-    byte triggered() {
+    // return true if PIR state changed
+    byte stateChanged() {
       byte f = changed;
       changed = 0;
       return f;
@@ -311,7 +302,7 @@ void loop() {
   serialFlush();
 #endif
 
-  if (sensorPIR.triggered()) {
+  if (sensorPIR.stateChanged()) {
     payload.moved = sensorPIR.state();
 
 #if DEBUG

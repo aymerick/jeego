@@ -11,6 +11,8 @@
 //  - https://github.com/nathanchantrell/TinyTX/blob/master/TinyTX_DHT22/TinyTX_DHT22.ino
 //  - https://github.com/mharizanov/TinySensor/blob/master/Funky_DHT22/Funky_DHT22.ino
 //
+// + Jeenode design by JC Wippler: http://jeelabs.net/projects/hardware/wiki/JeeNode
+//
 
 #include <JeeLib.h>
 #include <DHT22.h>
@@ -269,4 +271,3 @@ void loop() {
     Sleepy::loseSomeTime(60000);
   }
 }
-

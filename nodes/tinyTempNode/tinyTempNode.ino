@@ -1,14 +1,20 @@
 //
-// Jeego Node - [TinyTX] Temperature (http://nathan.chantrell.net/tinytx-wireless-sensor/)
-//
-// Original sketch: https://github.com/nathanchantrell/TinyTX/blob/master/TinyTX_DS18B20/TinyTX_DS18B20.ino
+// Jeego Node - [TinyTX] Temperature
 //
 // Sensors:
 //  - DS18B20 for temperature
 //
+// + TinyTX design by Nathan Chantrell: http://nathan.chantrell.net/tinytx-wireless-sensor/
+// + Original sketch: https://github.com/nathanchantrell/TinyTX/blob/master/TinyTX_DS18B20/TinyTX_DS18B20.ino
+//
+
+// @todo Move that to a blog post
+//
 // Arduino IDE Setup:
 //   - Install OneWire lib into ~/Documents/Arduino/libraries/OneWire/
 //       http://www.pjrc.com/teensy/arduino_libraries/OneWire.zip
+//
+//   - Fix OneWire lib: http://arduino.cc/forum/index.php/topic,91491.msg687523.html#msg687523
 //     Open OneWire.h and below the line:
 //       #include “Arduino.h”       // for delayMicroseconds, digitalPinToBitMask, etc
 //     add:
@@ -39,19 +45,6 @@
 //
 //   - If the sketch is stuck during call to rf12_sendWait then Burn Bootloader to fix the issue\
 //
-
-//----------------------------------------------------------------------------------------------------------------------
-// TinyTX - An ATtiny84 and RFM12B Wireless Temperature Sensor Node
-// By Nathan Chantrell. For hardware design see http://nathan.chantrell.net/tinytx
-//
-// Using the Dallas DS18B20 temperature sensor
-//
-// Licenced under the Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0) licence:
-// http://creativecommons.org/licenses/by-sa/3.0/
-//
-// Requires Arduino IDE with arduino-tiny core: http://code.google.com/p/arduino-tiny/
-// and small change to OneWire library, see: http://arduino.cc/forum/index.php/topic,91491.msg687523.html#msg687523
-//----------------------------------------------------------------------------------------------------------------------
 
 #include <JeeLib.h>            // https://github.com/jcw/jeelib
 #include <OneWire.h>           // http://www.pjrc.com/teensy/arduino_libraries/OneWire.zip
