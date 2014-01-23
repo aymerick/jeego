@@ -53,9 +53,9 @@
 // and small change to OneWire library, see: http://arduino.cc/forum/index.php/topic,91491.msg687523.html#msg687523
 //----------------------------------------------------------------------------------------------------------------------
 
-#include <OneWire.h> // http://www.pjrc.com/teensy/arduino_libraries/OneWire.zip
+#include <OneWire.h>           // http://www.pjrc.com/teensy/arduino_libraries/OneWire.zip
 #include <DallasTemperature.h> // http://download.milesburton.com/Arduino/MaximTemperature/DallasTemperature_LATEST.zip
-#include <JeeLib.h> // https://github.com/jcw/jeelib
+#include <JeeLib.h>            // https://github.com/jcw/jeelib
 
 ISR(WDT_vect) { Sleepy::watchdogEvent(); } // interrupt handler for JeeLabs Sleepy power saving
 
@@ -75,63 +75,81 @@ OneWire oneWire(ONE_WIRE_BUS); // Setup a oneWire instance
 
 DallasTemperature sensors(&oneWire); // Pass our oneWire reference to Dallas Temperature
 
-//########################################################################################################################
-//Data Structure to be sent
-//########################################################################################################################
 
- typedef struct {
-      int temp; // Temperature reading
-      int supplyV;  // Supply voltage
- } Payload;
+// Data Structure to be sent
+typedef struct {
+  int temp;    // Temperature reading
+  int supplyV; // Supply voltage
+} Payload;
 
- Payload tinytx;
+Payload tinytx;
+
+
+#ifdef USE_ACK
 
 // Wait a few milliseconds for proper ACK
- #ifdef USE_ACK
-  static byte waitForAck() {
-   MilliTimer ackTimer;
-   while (!ackTimer.poll(ACK_TIME)) {
-     if (rf12_recvDone() && rf12_crc == 0 &&
-        rf12_hdr == (RF12_HDR_DST | RF12_HDR_CTL | myNodeID))
-        return 1;
-     }
-   return 0;
-  }
- #endif
+static byte waitForAck() {
+  MilliTimer ackTimer;
+  while (!ackTimer.poll(ACK_TIME)) {
+    if (rf12_recvDone() && rf12_crc == 0 &&
+      rf12_hdr == (RF12_HDR_DST | RF12_HDR_CTL | myNodeID))
+      return 1;
+    }
+  return 0;
+}
 
-//--------------------------------------------------------------------------------------------------
-// Send payload data via RF
-//-------------------------------------------------------------------------------------------------
- static void rfwrite(){
-  #ifdef USE_ACK
-   for (byte i = 0; i <= RETRY_LIMIT; ++i) {  // tx and wait for ack up to RETRY_LIMIT times
-     rf12_sleep(-1);              // Wake up RF module
-      while (!rf12_canSend())
+static void rfwrite(){
+  // tx and wait for ack up to RETRY_LIMIT times
+  for (byte i = 0; i <= RETRY_LIMIT; ++i) {
+    // Wake up RF module
+    rf12_sleep(-1);
+
+    while (!rf12_canSend())
       rf12_recvDone();
-      rf12_sendStart(RF12_HDR_ACK, &tinytx, sizeof tinytx);
-      rf12_sendWait(2);           // Wait for RF to finish sending while in standby mode
-      byte acked = waitForAck();  // Wait for ACK
-      rf12_sleep(0);              // Put RF module to sleep
-      if (acked) { return; }      // Return if ACK received
 
-   Sleepy::loseSomeTime(RETRY_PERIOD * 1000);     // If no ack received wait and try again
-   }
-  #else
-     rf12_sleep(-1);              // Wake up RF module
-     while (!rf12_canSend())
-     rf12_recvDone();
-     rf12_sendStart(0, &tinytx, sizeof tinytx);
-     rf12_sendWait(2);           // Wait for RF to finish sending while in standby mode
-     rf12_sleep(0);              // Put RF module to sleep
-     return;
-  #endif
- }
+    rf12_sendStart(RF12_HDR_ACK, &tinytx, sizeof tinytx);
+
+    // Wait for RF to finish sending while in standby mode
+    rf12_sendWait(2);
+
+    // Wait for ACK
+    byte acked = waitForAck();
+
+    // Put RF module to sleep
+    rf12_sleep(0);
+
+    // Return if ACK received
+    if (acked) { return; }
+
+    // If no ack received wait and try again
+    Sleepy::loseSomeTime(RETRY_PERIOD * 1000);
+  }
+}
+
+#else
+
+static void rfwrite(){
+  // Wake up RF module
+  rf12_sleep(-1);
+
+  while (!rf12_canSend())
+    rf12_recvDone();
+
+  rf12_sendStart(0, &tinytx, sizeof tinytx);
+
+  // Wait for RF to finish sending while in standby mode
+  rf12_sendWait(2);
+
+  // Put RF module to sleep
+  rf12_sleep(0);
+
+  return;
+}
+
+#endif
 
 
-
-//--------------------------------------------------------------------------------------------------
 // Read current supply voltage
-//--------------------------------------------------------------------------------------------------
  long readVcc() {
    bitClear(PRR, PRADC); ADCSRA |= bit(ADEN); // Enable the ADC
    long result;
@@ -150,39 +168,49 @@ DallasTemperature sensors(&oneWire); // Pass our oneWire reference to Dallas Tem
    ADCSRA &= ~ bit(ADEN); bitSet(PRR, PRADC); // Disable the ADC to save power
    return result;
 }
-//########################################################################################################################
 
 void setup() {
+  // Initialize RFM12 with settings defined above
+  rf12_initialize(myNodeID, freq, network);
 
-  rf12_initialize(myNodeID,freq,network); // Initialize RFM12 with settings defined above
-  rf12_sleep(0);                          // Put the RFM12 to sleep
+  // Put the RFM12 to sleep
+  rf12_sleep(0);
 
-  pinMode(ONE_WIRE_POWER, OUTPUT); // set power pin for DS18B20 to output
+  // set power pin for DS18B20 to output
+  pinMode(ONE_WIRE_POWER, OUTPUT);
 
-  PRR = bit(PRTIM1); // only keep timer 0 going
+  // only keep timer 0 going
+  PRR = bit(PRTIM1);
 
-  ADCSRA &= ~ bit(ADEN); bitSet(PRR, PRADC); // Disable the ADC to save power
-
+  // Disable the ADC to save power
+  ADCSRA &= ~ bit(ADEN); bitSet(PRR, PRADC);
 }
 
 void loop() {
-
-  digitalWrite(ONE_WIRE_POWER, HIGH); // turn DS18B20 sensor on
+  // turn DS18B20 sensor on
+  digitalWrite(ONE_WIRE_POWER, HIGH);
 
   //Sleepy::loseSomeTime(5); // Allow 5ms for the sensor to be ready
   delay(5); // The above doesn't seem to work for everyone (why?)
 
-  sensors.begin(); //start up temp sensor
-  sensors.requestTemperatures(); // Get the temperature
-  tinytx.temp=(sensors.getTempCByIndex(0)*100); // Read first sensor and convert to integer, reversed at receiving end
+  //start up temp sensor
+  sensors.begin();
 
-  digitalWrite(ONE_WIRE_POWER, LOW); // turn DS18B20 off
+  // Get the temperature
+  sensors.requestTemperatures();
 
-  tinytx.supplyV = readVcc(); // Get supply voltage
+  // Read first sensor and convert to integer, reversed at receiving end
+  tinytx.temp = (sensors.getTempCByIndex(0)*100);
 
-  rfwrite(); // Send data via RF
+  // turn DS18B20 off
+  digitalWrite(ONE_WIRE_POWER, LOW);
 
-  Sleepy::loseSomeTime(60000); //JeeLabs power save function: enter low power mode for 60 seconds (valid range 16-65000 ms)
+  // Get supply voltage
+  tinytx.supplyV = readVcc();
 
+  // Send data via RF
+  rfwrite();
+
+  // JeeLabs power save function: enter low power mode for 60 seconds (valid range 16-65000 ms)
+  Sleepy::loseSomeTime(60000);
 }
-
