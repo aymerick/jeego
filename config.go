@@ -17,8 +17,7 @@ const defaultConfig = `
 	"serial_port": "/dev/ttyUSB0",
 	"serial_baud": 57600,
 	"domoticz_port": 8080,
-	"debug": false,
-	"nodes": [ ]
+	"debug": false
 }
 `
 
@@ -28,18 +27,6 @@ type Config struct {
 	DomoticzHost string `json:"domoticz_host"`
 	DomoticzPort int    `json:"domoticz_port"`
 	Debug        bool   `json:"debug"`
-	Nodes        []Node `json:"nodes"`
-}
-
-// get Node for given id
-func (config *Config) NodeForId(nodeId byte) *Node {
-	for _, node := range config.Nodes {
-		if node.Id == nodeId {
-			return &node
-		}
-	}
-
-	return nil
 }
 
 // borrowed from https://github.com/mitchellh/packer

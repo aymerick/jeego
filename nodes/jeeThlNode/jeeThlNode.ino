@@ -25,6 +25,9 @@ ISR(WDT_vect) { Sleepy::watchdogEvent(); }
 #define DEBUG 0
 #define NOOP 0
 
+// Node kind
+#define NODE_KIND 2
+
 // DHT22 Power wire is plugged into jeenode DI03 (arduino: digital 6)
 #define DHT22_POWER_PIN 6
 
@@ -55,10 +58,12 @@ static byte myNodeID;
 
 // serialized payload
 struct {
-  byte light;     // light sensor: 0..255
-  byte lobat :1;  // supply voltage dropped under 3.1V: 0..1
-  byte humi  :7;  // humidity: 0..100
-  int  temp  :10; // temperature: -512..+512 (tenths)
+  byte kind     :7;  // Node kind
+  byte reserved :1;  // Reserved for future use. Must be zero.
+  byte light;        // Light sensor: 0..255
+  byte lowbat   :1;  // Supply voltage dropped under 3.1V: 0..1
+  byte humi     :7;  // Humidity: 0..100
+  int  temp     :10; // Temperature: -512..+512 (tenths)
 } payload;
 
 // sensors
@@ -133,7 +138,7 @@ static void doReport() {
   Serial.print("jeeThlNode ");
   Serial.print((int) payload.light);
   Serial.print(' ');
-  Serial.print((int) payload.lobat);
+  Serial.print((int) payload.lowbat);
   Serial.print(' ');
   Serial.print((int) payload.humi);
   Serial.print(' ');
@@ -166,7 +171,7 @@ void readLDR() {
 
 // read Battery status
 void readLowBat() {
-  payload.lobat = rf12_lowbat();
+  payload.lowbat = rf12_lowbat();
 }
 
 // read DHT22 data
@@ -254,6 +259,10 @@ void setup() {
 
   // set output mode for DHT22 power pin
   pinMode(DHT22_POWER_PIN, OUTPUT);
+
+  // init payload
+  payload.reserved = 0;
+  payload.kind = NODE_KIND;
 }
 
 void loop() {

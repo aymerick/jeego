@@ -5,13 +5,13 @@ import (
 	"log"
 )
 
-func runWebServer(config *Config) {
+func runWebServer(database *Database) {
 	m := martini.Classic()
 
 	m.Get("/", func() string {
 		result := ""
 
-		for _, node := range config.Nodes {
+		for _, node := range database.nodes {
 			result += node.textData()
 		}
 

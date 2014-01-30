@@ -2,25 +2,5 @@
   "serial_port": "/dev/tty.usbserial-A1014IM4",
   "domoticz_host": "pikan.local",
   "domoticz_port": 8080,
-  "debug": true,
-  "nodes": [
-    {
-      "id": 2,
-      "kind": "jeeRoomNode",
-      "name": "Salon",
-      "domoticz_idx": "10"
-    },
-    {
-      "id": 3,
-      "kind": "jeeThlNode",
-      "name": "Chambre Parents",
-      "domoticz_idx": "11"
-    },
-    {
-      "id": 4,
-      "kind": "jeeThlNode",
-      "name": "Chambre Anouk",
-      "domoticz_idx": "12"
-    }
-  ]
+  "debug": true
 }

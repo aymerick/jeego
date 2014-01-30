@@ -22,6 +22,9 @@ ISR(WDT_vect) { Sleepy::watchdogEvent(); }
 #define DEBUG 0
 #define NOOP  0
 
+// Node kind
+#define NODE_KIND 1
+
 // defined if SHT11 is connected to a port
 #define SHT11_PORT 1 
 
@@ -71,11 +74,14 @@ static byte myNodeID;
 
 // serialized payload
 struct {
-  byte light;     // light sensor: 0..255
-  byte moved :1;  // motion detector: 0..1
-  byte humi  :7;  // humidity: 0..100
-  int  temp  :10; // temperature: -500..+500 (tenths)
-  byte lobat :1;  // supply voltage dropped under 3.1V: 0..1
+  byte kind     :7;  // Node kind
+  byte reserved :1;  // Reserved for future use. Must be zero.
+  // data
+  byte light;        // Light sensor: 0..255
+  byte moved    :1;  // Motion detector: 0..1
+  byte humi     :7;  // Humidity: 0..100
+  int  temp     :10; // Temperature: -500..+500 (tenths)
+  byte lobat    :1;  // Supply voltage dropped under 3.1V: 0..1
 } payload;
 
 // Interface to a Passive Infrared motion sensor.
@@ -288,6 +294,10 @@ void setup() {
   bitSet(PCMSK2, PIR_PORT + 3);
   bitSet(PCICR, PCIE2);
 #endif
+
+  // init payload
+  payload.reserved = 0;
+  payload.kind = NODE_KIND;
 
   // report right away for easy debugging
   reportCount = REPORT_EVERY;

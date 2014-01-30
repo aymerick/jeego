@@ -54,6 +54,9 @@
 ISR(WDT_vect) { Sleepy::watchdogEvent(); }
 
 
+// Node kind
+#define NODE_KIND 3
+
 // RF12 node ID in the range 1-30
 #define myNodeID 30
 
@@ -88,8 +91,10 @@ ISR(WDT_vect) { Sleepy::watchdogEvent(); }
 
 // serialized payload
 struct {
-  int temp;    // temperature reading
-  int supplyV; // supply voltage
+  byte kind     :7;  // Node kind
+  byte reserved :1;  // Reserved for future use. Must be zero.
+  int  vcc      :12; // Supply voltage: < 4096 mv
+  int  temp     :10; // Temperature: -512..+512 (tenths)
 } payload;
 
 
@@ -137,7 +142,7 @@ static void sendPayload(){
   }
 }
 
-// Read current supply voltage
+// Read current supply voltage in millivolts
 long readVcc() {
   long result;
 
@@ -145,6 +150,7 @@ long readVcc() {
   bitClear(PRR, PRADC); ADCSRA |= bit(ADEN);
 
   // Read 1.1V reference against Vcc
+  // set the reference to Vcc and the measurement to the internal 1.1V reference
 #if defined(__AVR_ATtiny84__)
   // For ATtiny84
   ADMUX = _BV(MUX5) | _BV(MUX0);
@@ -153,16 +159,19 @@ long readVcc() {
   ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
 #endif
 
-  delay(2); // Wait for Vref to settle
+  // Wait for Vref to settle
+  delay(2);
 
-  // Convert
+  // Start conversion
   ADCSRA |= _BV(ADSC);
+
+  // measuring
   while (bit_is_set(ADCSRA,ADSC));
 
   result = ADCL;
   result |= ADCH<<8;
 
-  // Back-calculate Vcc in mV
+  // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
   result = 1126400L / result;
 
   // Disable the ADC to save power
@@ -191,6 +200,10 @@ void setup() {
 
   // Disable the ADC to save power
   ADCSRA &= ~ bit(ADEN); bitSet(PRR, PRADC);
+
+  // init payload
+  payload.reserved = 0;
+  payload.kind = NODE_KIND;
 }
 
 void loop() {
@@ -206,14 +219,23 @@ void loop() {
   // get the temperature
   sensors.requestTemperatures();
 
-  // read first sensor and convert to integer, reversed at receiving end
-  payload.temp = (sensors.getTempCByIndex(0)*100);
+  // temperature value is send in payload on 10bits, so we keep only temperatures between -51.2 and 51.2
+  short int temp = (sensors.getTempCByIndex(0)*10);
+
+  if (temp > 512) {
+    temp = 512;
+  }
+  if (temp < -512) {
+    temp = -512;
+  }
+
+  payload.temp = temp;
 
   // power off sensor
   digitalWrite(ONE_WIRE_POWER_PIN, LOW);
 
   // get supply voltage
-  payload.supplyV = readVcc();
+  payload.vcc = readVcc();
 
   // send data
   sendPayload();
