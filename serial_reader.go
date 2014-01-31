@@ -16,7 +16,7 @@ type SerialReader struct {
 }
 
 // Instanciate a serial port reader
-func NewSerialReader(port string, baud int) *SerialReader {
+func newSerialReader(port string, baud int) *SerialReader {
 	conf := &serial.Config{Name: port, Baud: baud}
 	ser, err := serial.OpenPort(conf)
 	if err != nil {

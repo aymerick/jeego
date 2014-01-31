@@ -7,38 +7,35 @@ import (
 	"net/http"
 )
 
+// base to compute Device ID
+const DOMOTICZ_DEVICE_ID_BASE = 2000
+
+//
+// Device is created dynamically by using those parameters instead of 'idx':
+//  hid: HardwareID
+//  did: DeviceID
+//  dunit: Unit
+//  dtype: Type
+//  dsubtype: SubType
+//
+// Example Temp+Humi:
+//  hid: 1      => jeego virtual device already created with domoticz UI)
+//  did: 4000   => "ID": "0FA0" (created dynamically)
+//  dunit: 4    => ??
+//  dtype: 82   => pTypeTEMP_HUM 0x52 (temperature+humidity)
+//  dsubtype: 1 => sTypeTH1 0x1  //THGN122/123,THGN132,THGR122/228/238/268
+//
+//  http://pikan.local:8080/json.htm?type=command&param=udevice&hid=1&did=4000&dunit=4&dtype=82&dsubtype=1&nvalue=0&svalue=12.3;99;0
+//
+// Example Temp:
+//  dtype: 80   => pTypeTEMP 0x50 (temperature)
+//  dsubtype: 1 => sTypeTEMP1 0x1  //THR128/138,THC138
+//
 func pushToDomoticz(config *Config, node *Node) {
 	if config.DomoticzHost != "" {
-		idx := node.DomoticzIdx
-		value := node.domoticzValue()
-
-		if (idx != "") && (value != "") {
-			// Example:
-			//   $ curl -s -i -H "Accept: application/json" "http://pikan.local:8080/json.htm?type=command&param=udevice&idx=2&nvalue=0&svalue=12.3;45;0"
-			url := fmt.Sprintf("http://%s:%d/json.htm?type=command&param=udevice&idx=%s&nvalue=0&svalue=%s", config.DomoticzHost, config.DomoticzPort, idx, value)
-
-			// url := fmt.Sprintf("http://%s:%d/json.htm?type=command&param=udevice&nvalue=0&svalue=%s&...", config.DomoticzHost, config.DomoticzPort, value, ...)
-			//   hid: HardwareID
-			//   did: DeviceID
-			//   dunit: Unit
-			//   dtype: Type
-			//   dsubtype: SubType
-
-			// cf. http://code.google.com/p/usb-sensors-linux/wiki/Domoticz
-			//
-			// # Sensor parameters
-			// HID="1"
-			// DID="4000"
-			// DUNIT="4"
-			// DTYPE="82"
-			// DSUBTYPE="1"
-			// NVALUE="0"
-			// SVALUE="$TEMP;$HUM;9"
-			//
-			// # Send data
-			// curl -s -i -H "Accept: application/json" "http://$SERVER/json.htm?type=command&param=udevice&hid=$HID&did=$DID&dunit=$DUNIT&dtype=$DTYPE&dsubtype=$DSUBTYPE&nvalue=$NVALUE&svalue=$SVALUE"
-			//
-			// With these sensor type the data will be reported as type "Temp + Humidity" and subtype "Oregon THGN122/123, THGN132, THGR122/228/238/268".
+		params := node.domoticzParams(config.DomoticzHardwareId)
+		if params != "" {
+			url := fmt.Sprintf("http://%s:%d/json.htm?type=command&param=udevice&%s", config.DomoticzHost, config.DomoticzPort, params)
 
 			if config.Debug {
 				log.Printf("[%s] Pushing to domoticz: %s", node.Name, url)

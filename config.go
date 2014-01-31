@@ -22,11 +22,12 @@ const defaultConfig = `
 `
 
 type Config struct {
-	SerialPort   string `json:"serial_port"`
-	SerialBaud   int    `json:"serial_baud"`
-	DomoticzHost string `json:"domoticz_host"`
-	DomoticzPort int    `json:"domoticz_port"`
-	Debug        bool   `json:"debug"`
+	SerialPort         string `json:"serial_port"`
+	SerialBaud         int    `json:"serial_baud"`
+	DomoticzHost       string `json:"domoticz_host"`
+	DomoticzPort       int    `json:"domoticz_port"`
+	DomoticzHardwareId string `json:"domoticz_hardware_id"`
+	Debug              bool   `json:"debug"`
 }
 
 // borrowed from https://github.com/mitchellh/packer

@@ -29,14 +29,6 @@ type Sensor uint
 
 var SensorsForKind map[int]Sensor
 
-func init() {
-	SensorsForKind = map[int]Sensor{
-		JEE_ROOM_NODE:  TEMP_SENSOR + HUMI_SENSOR + LIGHT_SENSOR + LOWBAT_SENSOR + MOTION_SENSOR,
-		JEE_THL_NODE:   TEMP_SENSOR + HUMI_SENSOR + LIGHT_SENSOR + LOWBAT_SENSOR,
-		TINY_TEMP_NODE: TEMP_SENSOR + VCC_SENSOR,
-	}
-}
-
 // Node
 type Node struct {
 	Id          int
@@ -52,6 +44,14 @@ type Node struct {
 	Motion      bool
 	LowBattery  bool
 	Vcc         int
+}
+
+func init() {
+	SensorsForKind = map[int]Sensor{
+		JEE_ROOM_NODE:  TEMP_SENSOR + HUMI_SENSOR + LIGHT_SENSOR + LOWBAT_SENSOR + MOTION_SENSOR,
+		JEE_THL_NODE:   TEMP_SENSOR + HUMI_SENSOR + LIGHT_SENSOR + LOWBAT_SENSOR,
+		TINY_TEMP_NODE: TEMP_SENSOR + VCC_SENSOR,
+	}
 }
 
 func (node *Node) handleData(data []byte) {
@@ -164,38 +164,38 @@ func (node *Node) handleTinyTempNodeData(data []byte) {
 	}
 }
 
+// Text to display for debugging
 func (node *Node) textData() string {
-	result := fmt.Sprintf("[%d] %s:", node.Id, node.Name)
+	result := ""
 
 	if node.haveSensor(TEMP_SENSOR) {
-		result += "\n  Temperature: " + strconv.FormatFloat(float64(node.Temperature), 'f', 1, 64)
+		result += " | Temperature: " + strconv.FormatFloat(float64(node.Temperature), 'f', 1, 64)
 	}
 
 	if node.haveSensor(HUMI_SENSOR) {
-		result += "\n  Humidity: " + strconv.Itoa(int(node.Humidity))
+		result += " | Humidity: " + strconv.Itoa(int(node.Humidity))
 	}
 
 	if node.haveSensor(LIGHT_SENSOR) {
-		result += "\n  Light: " + strconv.Itoa(int(node.Light))
+		result += " | Light: " + strconv.Itoa(int(node.Light))
 	}
 
 	if node.haveSensor(MOTION_SENSOR) {
-		result += "\n  Motion: " + strconv.FormatBool(node.Motion)
+		result += " | Motion: " + strconv.FormatBool(node.Motion)
 	}
 
 	if node.haveSensor(LOWBAT_SENSOR) {
-		result += "\n  LowBattery: " + strconv.FormatBool(node.LowBattery)
+		result += " | LowBattery: " + strconv.FormatBool(node.LowBattery)
 	}
 
 	if node.haveSensor(VCC_SENSOR) {
-		result += "\n  Vcc: " + strconv.Itoa(node.Vcc)
+		result += " | Vcc: " + strconv.Itoa(node.Vcc)
 	}
-
-	result += "\n\n"
 
 	return result
 }
 
+// Values to insert in database
 func (node *Node) dbValues() []*DBValue {
 	result := make([]*DBValue, 0)
 
@@ -226,19 +226,46 @@ func (node *Node) dbValues() []*DBValue {
 	return result
 }
 
-// @todo Send others sensors values to domoticz
-func (node *Node) domoticzValue() string {
+// Query parameters part to send to domoticz
+func (node *Node) domoticzParams(hardwareId string) string {
 	result := ""
 
-	if node.haveSensor(TEMP_SENSOR) {
-		result += fmt.Sprintf("%.1f;", node.Temperature)
-	}
+	isPushable := (node.DomoticzIdx != "") || (hardwareId != "")
+	haveSensor := node.haveSensor(TEMP_SENSOR) || node.haveSensor(HUMI_SENSOR)
 
-	if node.haveSensor(HUMI_SENSOR) {
-		result += fmt.Sprintf("%d;", node.Humidity)
-	}
+	if isPushable && haveSensor {
+		if node.DomoticzIdx != "" {
+			result += fmt.Sprintf("idx=%s&nvalue=0&svalue=", node.DomoticzIdx)
+		} else {
+			hid      := hardwareId
+			did      := DOMOTICZ_DEVICE_ID_BASE + node.Id
+			dunit    := 1 // ??
+			dsubtype := 1
 
-	result += "0"
+			// pTypeTEMP_HUM 0x50 (temperature)
+			dtype := 80
+
+			if node.haveSensor(TEMP_SENSOR) && node.haveSensor(HUMI_SENSOR) {
+				// pTypeTEMP_HUM 0x52 (temperature+humidity)
+				dtype = 82
+			} else if node.haveSensor(HUMI_SENSOR) {
+				// pTypeTEMP_HUM 0x51 (humidity)
+				dtype = 81
+			}
+
+			result += fmt.Sprintf("hid=%s&did=%d&dunit=%d&dtype=%d&dsubtype=%d&nvalue=0&svalue=", hid, did, dunit, dtype, dsubtype)
+		}
+
+		if node.haveSensor(TEMP_SENSOR) {
+			result += fmt.Sprintf("%.1f;", node.Temperature)
+		}
+
+		if node.haveSensor(HUMI_SENSOR) {
+			result += fmt.Sprintf("%d;", node.Humidity)
+		}
+
+		result += "0"
+	}
 
 	return result
 }
