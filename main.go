@@ -31,7 +31,7 @@ func newJeego() *Jeego {
 	log.Printf("Jeego database loaded")
 
 	return &Jeego{
-		config: config,
+		config:   config,
 		database: database,
 	}
 }

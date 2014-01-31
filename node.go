@@ -156,10 +156,10 @@ func (node *Node) handleJeeThlNodeData(data []byte) {
 //
 func (node *Node) handleTinyTempNodeData(data []byte) {
 	if len(data) == 3 {
-		var vcc         int = (int(data[1] & 0x0F) << 8) + int(data[0])
-		var temperature int = (int(data[1] & 0xF0) >> 4) + (int(data[2] & 0x3F) << 4)
+		var vcc int = (int(data[1]&0x0F) << 8) + int(data[0])
+		var temperature int = (int(data[1]&0xF0) >> 4) + (int(data[2]&0x3F) << 4)
 
-		node.Vcc         = vcc;
+		node.Vcc = vcc
 		node.Temperature = float32(temperature) / 10
 	}
 }
@@ -200,27 +200,27 @@ func (node *Node) dbValues() []*DBValue {
 	result := make([]*DBValue, 0)
 
 	if node.haveSensor(TEMP_SENSOR) {
-        result = append(result, &DBValue{name: "temperature", value: node.Temperature})
+		result = append(result, &DBValue{name: "temperature", value: node.Temperature})
 	}
 
 	if node.haveSensor(HUMI_SENSOR) {
-        result = append(result, &DBValue{name: "humidity", value: node.Humidity})
+		result = append(result, &DBValue{name: "humidity", value: node.Humidity})
 	}
 
 	if node.haveSensor(LIGHT_SENSOR) {
-        result = append(result, &DBValue{name: "light", value: node.Light})
+		result = append(result, &DBValue{name: "light", value: node.Light})
 	}
 
 	if node.haveSensor(MOTION_SENSOR) {
-        result = append(result, &DBValue{name: "motion", value: node.Motion})
+		result = append(result, &DBValue{name: "motion", value: node.Motion})
 	}
 
 	if node.haveSensor(LOWBAT_SENSOR) {
-        result = append(result, &DBValue{name: "lowbat", value: node.LowBattery})
+		result = append(result, &DBValue{name: "lowbat", value: node.LowBattery})
 	}
 
 	if node.haveSensor(VCC_SENSOR) {
-        result = append(result, &DBValue{name: "vcc", value: node.Vcc})
+		result = append(result, &DBValue{name: "vcc", value: node.Vcc})
 	}
 
 	return result
@@ -237,9 +237,9 @@ func (node *Node) domoticzParams(hardwareId string) string {
 		if node.DomoticzIdx != "" {
 			result += fmt.Sprintf("idx=%s&nvalue=0&svalue=", node.DomoticzIdx)
 		} else {
-			hid      := hardwareId
-			did      := DOMOTICZ_DEVICE_ID_BASE + node.Id
-			dunit    := 1 // ??
+			hid := hardwareId
+			did := DOMOTICZ_DEVICE_ID_BASE + node.Id
+			dunit := 1 // ??
 			dsubtype := 1
 
 			// pTypeTEMP_HUM 0x50 (temperature)

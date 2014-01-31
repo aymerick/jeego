@@ -16,7 +16,7 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 
 		// loop forever
 		for {
-			line = <- inputChan
+			line = <-inputChan
 
 			// parse node infos and data
 			nodeId, nodeKind, data, err := parseLine(line)
@@ -31,8 +31,8 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 
 					// debug
 					if jeego.config.Debug {
-				        pringDebugMsgForNode(node, "New node added to database")
-				    }
+						pringDebugMsgForNode(node, "New node added to database")
+					}
 				}
 
 				// handle data
@@ -48,7 +48,7 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 
 				// debug
 				if jeego.config.Debug {
-				    pringDebugMsgForNode(node, "Node updated into database")
+					pringDebugMsgForNode(node, "Node updated into database")
 				}
 
 				// push to domoticz
@@ -62,7 +62,7 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 
 // print formatted debug message
 func pringDebugMsgForNode(node *Node, msg string) {
-    log.Printf("[%d] %s: %s", node.Id, node.Name, msg)
+	log.Printf("[%d] %s: %s", node.Id, node.Name, msg)
 }
 
 // Parse a line received from central node
