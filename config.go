@@ -12,6 +12,10 @@ import (
 	"strings"
 )
 
+// Serial port:
+//   - Jeelink on Mac: /dev/tty.usbserial-A1014IM4
+//   - Jeelink on Raspberry: /dev/ttyUSB0
+//   - Jeenode on Raspberry FTDI: /dev/ttyAMA0 (cf. http://jeelabs.org/2012/09/20/serial-hookup-jeenode-to-raspberry-pi/)
 const defaultConfig = `
 {
 	"serial_port": "/dev/ttyUSB0",

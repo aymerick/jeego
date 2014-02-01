@@ -158,6 +158,10 @@ func (node *Node) handleTinyTempNodeData(data []byte) {
 	if len(data) == 3 {
 		var vcc int = (int(data[1]&0x0F) << 8) + int(data[0])
 		var temperature int = (int(data[1]&0xF0) >> 4) + (int(data[2]&0x3F) << 4)
+		if temperature > 512 {
+			// negative value
+			temperature = temperature - 1024
+		}
 
 		node.Vcc = vcc
 		node.Temperature = float32(temperature) / 10

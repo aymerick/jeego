@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var schema = `
+const NODES_SCHEMA = `
 CREATE TABLE IF NOT EXISTS nodes (
     id INTEGER NOT NULL PRIMARY KEY,
     kind INTEGER NOT NULL,
@@ -25,10 +25,24 @@ CREATE TABLE IF NOT EXISTS nodes (
 );
 `
 
+const LOGS_SCHEMA = `
+CREATE TABLE IF NOT EXISTS logs (
+	node_id INTEGER NOT NULL,
+	at INTEGER NOT NULL,
+	temperature REAL,
+	humidity INTEGER,
+	light INTEGER,
+	motion INTEGER,
+	lowbat INTEGER,
+	vcc INTEGER
+);
+`
+
 // Database
 type Database struct {
-	driver *sql.DB
-	nodes  []*Node
+	driver     *sql.DB
+	nodes      []*Node
+	logsTicker *time.Ticker
 }
 
 // Database value
@@ -58,9 +72,13 @@ func loadDatabase() (*Database, error) {
 
 // Create tables
 func (db *Database) createTables() {
-	_, err := db.driver.Exec(schema)
-	if err != nil {
-		log.Panic(errors.New(fmt.Sprintf("Failed to create SQL tables %q: %s", err, schema)))
+	schemas := [2]string{NODES_SCHEMA, LOGS_SCHEMA}
+
+	for _, schema := range schemas {
+		_, err := db.driver.Exec(schema)
+		if err != nil {
+			log.Panic(errors.New(fmt.Sprintf("Failed to create SQL table %q: %s", err, schema)))
+		}
 	}
 }
 
@@ -77,36 +95,62 @@ func (db *Database) loadNodes() {
 	defer rows.Close()
 
 	for rows.Next() {
+		var node *Node
+
 		// fetch node fields
 		var (
 			id           int
 			kind         int
 			updated_at   int64
-			name         string
-			domoticz_idx string
-			temperature  float32
-			humidity     uint8
-			light        uint8
-			motion       bool
-			lowbat       bool
-			vcc          int
+			name         sql.NullString
+			domoticz_idx sql.NullString
+			temperature  sql.NullFloat64
+			humidity     sql.NullInt64
+			light        sql.NullInt64
+			motion       sql.NullBool
+			lowbat       sql.NullBool
+			vcc          sql.NullInt64
 		)
 
 		rows.Scan(&id, &kind, &updated_at, &name, &domoticz_idx, &temperature, &humidity, &light, &motion, &lowbat, &vcc)
 
 		// init node
-		node := &Node{
-			Id:          id,
-			Kind:        kind,
-			UpdatedAt:   time.Unix(updated_at, 0),
-			Name:        name,
-			DomoticzIdx: domoticz_idx,
-			Temperature: temperature,
-			Humidity:    humidity,
-			Light:       light,
-			Motion:      motion,
-			LowBattery:  lowbat,
-			Vcc:         vcc,
+		node = &Node{
+			Id:        id,
+			Kind:      kind,
+			UpdatedAt: time.Unix(updated_at, 0),
+		}
+
+		if name.Valid {
+			node.Name = name.String
+		}
+
+		if domoticz_idx.Valid {
+			node.DomoticzIdx = domoticz_idx.String
+		}
+
+		if temperature.Valid {
+			node.Temperature = float32(temperature.Float64)
+		}
+
+		if humidity.Valid {
+			node.Humidity = uint8(humidity.Int64)
+		}
+
+		if light.Valid {
+			node.Light = uint8(light.Int64)
+		}
+
+		if motion.Valid {
+			node.Motion = motion.Bool
+		}
+
+		if lowbat.Valid {
+			node.LowBattery = lowbat.Bool
+		}
+
+		if vcc.Valid {
+			node.Vcc = int(vcc.Int64)
 		}
 
 		// add node to list
@@ -168,4 +212,57 @@ func (db *Database) updateNode(node *Node) {
 			log.Panic(err)
 		}
 	}
+}
+
+// Insert log for given node
+func (db *Database) insertLog(node *Node) {
+	dbValues := node.dbValues()
+	if len(dbValues) > 0 {
+		args := make([]interface{}, 0)
+
+		query := "INSERT INTO logs(node_id, at"
+		args = append(args, node.Id)
+		args = append(args, time.Now().UTC().Unix())
+
+		for _, dbValue := range dbValues {
+			query += fmt.Sprintf(", %s", dbValue.name)
+			args = append(args, dbValue.value)
+		}
+
+		query += ") VALUES(?, ?"
+		for i := 0; i < len(dbValues); i++ {
+			query += ", ?"
+		}
+		query += ")"
+
+		// log.Printf("query: %s - %v", query, args)
+
+		_, err := db.driver.Exec(query, args...)
+		if err != nil {
+			log.Panic(err)
+		}
+	}
+}
+
+// Insert logs for all nodes
+func (db *Database) insertLogs() {
+	for _, node := range db.nodes {
+		db.insertLog(node)
+	}
+}
+
+// Add a log entry every 5 minutes
+func (db *Database) startLogsTicker(period time.Duration) {
+	db.logsTicker = time.NewTicker(period)
+
+	// do it right now
+	db.insertLogs()
+
+	// @todo Delete old logs (keep only two days)
+
+	go func() {
+		for _ = range db.logsTicker.C {
+			db.insertLogs()
+		}
+	}()
 }

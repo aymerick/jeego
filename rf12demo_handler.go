@@ -62,7 +62,7 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 
 // print formatted debug message
 func pringDebugMsgForNode(node *Node, msg string) {
-	log.Printf("[%d] %s: %s", node.Id, node.Name, msg)
+	log.Printf("%s <node %d> %s", node.Name, node.Id, msg)
 }
 
 // Parse a line received from central node

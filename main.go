@@ -5,6 +5,11 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
+)
+
+const (
+	LOG_PERIOD = 5 // in minutes
 )
 
 // Jeego
@@ -28,7 +33,14 @@ func newJeego() *Jeego {
 		log.Panic(err)
 	}
 
-	log.Printf("Jeego database loaded")
+	log.Printf("Jeego database loaded with %d nodes", len(database.nodes))
+
+	// debug
+	if config.Debug {
+		for _, node := range database.nodes {
+			log.Printf("%s <node %d> %s", node.Name, node.Id, node.textData())
+		}
+	}
 
 	return &Jeego{
 		config:   config,
@@ -42,9 +54,12 @@ func main() {
 	log.Printf("Jeego - Target OS/Arch: %s %s", runtime.GOOS, runtime.GOARCH)
 	log.Printf("Built with Go Version: %s", runtime.Version())
 
+	// init Jeego
 	jeego := newJeego()
 
-	// @todo Save nodes values to database every 5mn
+	// save nodes values to database every 5mn
+	jeego.database.startLogsTicker(time.Minute * LOG_PERIOD)
+
 	// @todo Save nodes values to database every day
 
 	// start handler
