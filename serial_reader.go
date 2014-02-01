@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/tarm/goserial"
+	"github.com/chimera/rs232"
 	"io"
 	"log"
 )
@@ -17,8 +17,9 @@ type SerialReader struct {
 
 // Instanciate a serial port reader
 func newSerialReader(port string, baud int) *SerialReader {
-	conf := &serial.Config{Name: port, Baud: baud}
-	ser, err := serial.OpenPort(conf)
+	options := rs232.Options{ BitRate: uint32(baud), DataBits: 8, StopBits: 1 }
+	ser, err := rs232.Open(port, options)
+
 	if err != nil {
 		log.Panic(err)
 	}
