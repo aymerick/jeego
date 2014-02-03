@@ -1,7 +1,7 @@
 jeego
 =====
 
-House monitoring with Jeenode sensors and Go lang
+House monitoring with Jeenode/TinyTX sensors and Go lang.
 
 
 Install
@@ -59,21 +59,8 @@ Example:
   "serial_baud": 57600,
   "domoticz_host": "127.0.0.1",
   "domoticz_port": 8080,
-  "debug": true,
-  "nodes": [
-    {
-      "id": 2,
-      "kind": "jeeRoomNode",
-      "name": "Bureau Aymerick",
-      "domoticz_idx": "2"
-    },
-    {
-      "id": 3,
-      "kind": "jeeThlNode",
-      "name": "jeeThlNode test",
-      "domoticz_idx": "3"
-    }
-  ]
+  "log_level": "info",
+  "log_file": "stdout"
 }
 ```
 
@@ -83,3 +70,4 @@ Nodes kinds
 
 - jeeRoomNode: [jeenode] Jeelabs official Room Board (http://jeelabs.com/products/room-board)
 - jeeThlNode: [jeenode] "Temperature Humidity Light" with DHT22 and LDR
+- tinyTempNode: [TinyTX] Temperature with DS18B20 (http://nathan.chantrell.net/tinytx-wireless-sensor/)
