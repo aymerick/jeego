@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	LOG_PERIOD = 5 // in minutes
+	LOG_PERIOD  = 5 // in minutes
+	LOG_HISTORY = 2 // in days
 )
 
 // Jeego
@@ -58,7 +59,7 @@ func main() {
 	jeego := newJeego()
 
 	// save nodes values to database every 5mn
-	jeego.database.startLogsTicker(time.Minute * LOG_PERIOD)
+	jeego.database.startLogsTicker(time.Minute * LOG_PERIOD, time.Hour * 24 * LOG_HISTORY)
 
 	// @todo Save nodes values to database every day
 

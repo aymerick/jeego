@@ -1,6 +1,5 @@
 {
   "serial_port": "/dev/tty.usbserial-A1014IM4",
-  "domoticz_host": "pikan.local",
   "domoticz_port": 8080,
   "domoticz_hardware_id": "1",
   "debug": true

@@ -130,7 +130,7 @@ func (db *Database) loadNodes() {
 		}
 
 		if temperature.Valid {
-			node.Temperature = float32(temperature.Float64)
+			node.Temperature = float64(temperature.Float64)
 		}
 
 		if humidity.Valid {
@@ -235,7 +235,7 @@ func (db *Database) insertLog(node *Node) {
 		}
 		query += ")"
 
-		// log.Printf("query: %s - %v", query, args)
+		// log.Printf("[insertLog] %s with %v", query, args)
 
 		_, err := db.driver.Exec(query, args...)
 		if err != nil {
@@ -252,17 +252,31 @@ func (db *Database) insertLogs() {
 }
 
 // Add a log entry every 5 minutes
-func (db *Database) startLogsTicker(period time.Duration) {
+func (db *Database) startLogsTicker(period time.Duration, history time.Duration) {
 	db.logsTicker = time.NewTicker(period)
 
 	// do it right now
 	db.insertLogs()
 
-	// @todo Delete old logs (keep only two days)
-
 	go func() {
 		for _ = range db.logsTicker.C {
 			db.insertLogs()
+
+			db.trimLogs(history);
 		}
 	}()
+}
+
+// Delete old logs
+func (db *Database) trimLogs(history time.Duration) {
+	trimTo := time.Now().UTC().Add(-history).Unix()
+
+	query := "DELETE FROM logs WHERE (at < ?)"
+
+	// log.Printf("[trimLogs] %s with %v", query, trimTo)
+
+	_, err := db.driver.Exec(query, trimTo)
+	if err != nil {
+		log.Panic(err)
+	}
 }

@@ -4,6 +4,7 @@ import (
 	// "errors"
 	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"time"
 )
@@ -38,7 +39,7 @@ type Node struct {
 	DomoticzIdx string
 
 	// sensors
-	Temperature float32
+	Temperature float64
 	Humidity    uint8
 	Light       uint8
 	Motion      bool
@@ -106,7 +107,7 @@ func (node *Node) handleJeeRoomNodeData(data []byte) {
 		node.Light = uint8((int(data[0]) * 100) / 255)
 		node.Motion = ((data[1] & 1) == 1)
 		node.Humidity = data[1] >> 1
-		node.Temperature = float32(temperature) / 10
+		node.Temperature = math.Ceil(float64(temperature)) / 10
 		node.LowBattery = (((data[3] >> 2) & 1) == 1)
 	}
 }
@@ -137,7 +138,7 @@ func (node *Node) handleJeeThlNodeData(data []byte) {
 		node.Light = uint8((int(data[0]) * 100) / 255)
 		node.LowBattery = ((data[1] & 1) == 1)
 		node.Humidity = data[1] >> 1
-		node.Temperature = float32(temperature) / 10
+		node.Temperature = math.Ceil(float64(temperature)) / 10
 	}
 }
 
@@ -164,7 +165,7 @@ func (node *Node) handleTinyTempNodeData(data []byte) {
 		}
 
 		node.Vcc = vcc
-		node.Temperature = float32(temperature) / 10
+		node.Temperature = float64(temperature) / 10
 	}
 }
 
