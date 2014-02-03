@@ -1,11 +1,10 @@
 package main
 
 import (
+	log "code.google.com/p/log4go"
 	"database/sql"
-	"errors"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
-	"log"
 	"time"
 )
 
@@ -77,7 +76,7 @@ func (db *Database) createTables() {
 	for _, schema := range schemas {
 		_, err := db.driver.Exec(schema)
 		if err != nil {
-			log.Panic(errors.New(fmt.Sprintf("Failed to create SQL table %q: %s", err, schema)))
+			panic(log.Critical("Failed to create SQL table %q: %s", err, schema))
 		}
 	}
 }
@@ -90,7 +89,7 @@ func (db *Database) loadNodes() {
 	// fetch nodes from db
 	rows, err := db.driver.Query("SELECT * FROM nodes")
 	if err != nil {
-		log.Fatal(err)
+		panic(log.Critical(err))
 	}
 	defer rows.Close()
 
@@ -182,7 +181,7 @@ func (db *Database) insertNode(id int, kind int) *Node {
 	// persist in database
 	_, err := db.driver.Exec("INSERT INTO nodes(id, kind) VALUES(?, ?)", id, kind)
 	if err != nil {
-		log.Fatal(err)
+		panic(log.Critical(err))
 	}
 
 	return node
@@ -209,7 +208,7 @@ func (db *Database) updateNode(node *Node) {
 
 		_, err := db.driver.Exec(query, args...)
 		if err != nil {
-			log.Panic(err)
+			panic(log.Critical(err))
 		}
 	}
 }
@@ -239,7 +238,7 @@ func (db *Database) insertLog(node *Node) {
 
 		_, err := db.driver.Exec(query, args...)
 		if err != nil {
-			log.Panic(err)
+			panic(log.Critical(err))
 		}
 	}
 }
@@ -277,6 +276,6 @@ func (db *Database) trimLogs(history time.Duration) {
 
 	_, err := db.driver.Exec(query, trimTo)
 	if err != nil {
-		log.Panic(err)
+		panic(log.Critical(err))
 	}
 }

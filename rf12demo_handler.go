@@ -1,8 +1,8 @@
 package main
 
 import (
+	log "code.google.com/p/log4go"
 	"errors"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -30,26 +30,20 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 					node = jeego.database.insertNode(nodeId, nodeKind)
 
 					// debug
-					if jeego.config.Debug {
-						pringDebugMsgForNode(node, "New node added to database")
-					}
+					pringDebugMsgForNode(node, "New node added to database")
 				}
 
 				// handle data
 				node.handleData(data)
 
 				// debug
-				if jeego.config.Debug {
-					pringDebugMsgForNode(node, node.textData())
-				}
+				pringDebugMsgForNode(node, node.textData())
 
 				// update database
 				jeego.database.updateNode(node)
 
 				// debug
-				if jeego.config.Debug {
-					pringDebugMsgForNode(node, "Node updated into database")
-				}
+				pringDebugMsgForNode(node, "Node updated into database")
 
 				// push to domoticz
 				go pushToDomoticz(jeego.config, node)
@@ -62,7 +56,7 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 
 // print formatted debug message
 func pringDebugMsgForNode(node *Node, msg string) {
-	log.Printf("%s <node %d> %s", node.Name, node.Id, msg)
+	log.Debug("%s <node %d> %s", node.Name, node.Id, msg)
 }
 
 // Parse a line received from central node
@@ -103,7 +97,7 @@ func parseLine(line string) (nodeId int, nodeKind int, data []byte, err error) {
 
 		// check reserved field
 		if (nodeInfosByte & 0x80) != 0 {
-			log.Printf("Received payload with reserved field set to 1")
+			log.Warn("Received payload with reserved field set to 1")
 		} else {
 			// parse node kind
 			nodeKind = int(nodeInfosByte & 0x7f)
@@ -128,7 +122,7 @@ func parseLine(line string) (nodeId int, nodeKind int, data []byte, err error) {
 func byteFromString(val string) byte {
 	i, err := strconv.ParseUint(val, 10, 8)
 	if err != nil {
-		log.Panic(err)
+		panic(log.Critical(err))
 	}
 
 	return byte(i)

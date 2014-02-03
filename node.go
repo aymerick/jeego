@@ -1,9 +1,8 @@
 package main
 
 import (
-	// "errors"
+	log "code.google.com/p/log4go"
 	"fmt"
-	"log"
 	"math"
 	"strconv"
 	"time"
@@ -64,7 +63,7 @@ func (node *Node) handleData(data []byte) {
 	case TINY_TEMP_NODE:
 		node.handleTinyTempNodeData(data)
 	default:
-		log.Printf(fmt.Sprintf("Unsupported node kind: %d;", node.Kind))
+		log.Error(fmt.Sprintf("Unsupported node kind: %d;", node.Kind))
 	}
 }
 

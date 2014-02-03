@@ -1,8 +1,8 @@
 package main
 
 import (
+	log "code.google.com/p/log4go"
 	"github.com/codegangsta/martini"
-	"log"
 )
 
 func runWebServer(database *Database) {
@@ -18,6 +18,6 @@ func runWebServer(database *Database) {
 		return result
 	})
 
-	log.Printf("Starting web server runloop")
+	log.Info("Starting web server runloop")
 	m.Run()
 }

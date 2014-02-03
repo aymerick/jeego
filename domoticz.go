@@ -1,9 +1,9 @@
 package main
 
 import (
+	log "code.google.com/p/log4go"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 )
 
@@ -37,22 +37,18 @@ func pushToDomoticz(config *Config, node *Node) {
 		if params != "" {
 			url := fmt.Sprintf("http://%s:%d/json.htm?type=command&param=udevice&%s", config.DomoticzHost, config.DomoticzPort, params)
 
-			if config.Debug {
-				log.Printf("[%s] Pushing to domoticz: %s", node.Name, url)
-			}
+			log.Debug("[%s] Pushing to domoticz: %s", node.Name, url)
 
 			resp, err := http.Get(url)
 			if err != nil {
-				log.Printf("[%s] Failed to push value to domoticz", node.Name)
+				log.Warn("[%s] Failed to push value to domoticz", node.Name)
 			} else {
 				respText, err := ioutil.ReadAll(resp.Body)
 				resp.Body.Close()
 				if err != nil {
-					log.Printf("[%s] Failed to get domoticz response", node.Name)
+					log.Warn("[%s] Failed to get domoticz response", node.Name)
 				} else {
-					if config.Debug {
-						log.Printf("[%s] Domoticz response: %s", node.Name, respText)
-					}
+					log.Debug("[%s] Domoticz response: %s", node.Name, respText)
 				}
 			}
 		}

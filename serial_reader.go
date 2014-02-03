@@ -1,9 +1,9 @@
 package main
 
 import (
+	log "code.google.com/p/log4go"
 	"github.com/chimera/rs232"
 	"io"
-	"log"
 )
 
 const (
@@ -21,7 +21,7 @@ func newSerialReader(port string, baud int) *SerialReader {
 	ser, err := rs232.Open(port, options)
 
 	if err != nil {
-		log.Panic(err)
+		panic(log.Critical(err))
 	}
 
 	return &SerialReader{ser}
@@ -36,7 +36,7 @@ func (ser *SerialReader) readLine() string {
 	for lastRead[0] != LF_CHAR {
 		n, err := ser.Read(lastRead)
 		if (err != nil) || (n != 1) {
-			log.Panic(err)
+			panic(log.Critical(err))
 		}
 
 		result = append(result, lastRead[0])

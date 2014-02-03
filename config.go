@@ -1,11 +1,11 @@
 package main
 
 import (
+	log "code.google.com/p/log4go"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,7 +21,8 @@ const defaultConfig = `
 	"serial_port": "/dev/ttyUSB0",
 	"serial_baud": 57600,
 	"domoticz_port": 8080,
-	"debug": false
+	"log_level": "warn",
+	"log_file": "stdout"
 }
 `
 
@@ -31,7 +32,8 @@ type Config struct {
 	DomoticzHost       string `json:"domoticz_host"`
 	DomoticzPort       int    `json:"domoticz_port"`
 	DomoticzHardwareId string `json:"domoticz_hardware_id"`
-	Debug              bool   `json:"debug"`
+	LogLevel           string `json:"log_level"`
+	LogFile            string `json:"log_file"`
 }
 
 // borrowed from https://github.com/mitchellh/packer
@@ -49,7 +51,7 @@ func loadConfig() (*Config, error) {
 		mustExist = false
 
 		if err != nil {
-			log.Printf("Error detecting default config file path: %s", err)
+			log.Error("Error detecting default config file path: %s", err)
 		}
 	}
 
@@ -57,7 +59,7 @@ func loadConfig() (*Config, error) {
 		return &config, nil
 	}
 
-	log.Printf("Attempting to open config file: %s", configFilePath)
+	log.Debug("Attempting to open config file: %s", configFilePath)
 	f, err := os.Open(configFilePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -68,7 +70,7 @@ func loadConfig() (*Config, error) {
 			return nil, err
 		}
 
-		log.Println("File doesn't exist, but doesn't need to. Ignoring.")
+		log.Debug("File doesn't exist, but doesn't need to. Ignoring.")
 		return &config, nil
 	}
 	defer f.Close()
@@ -100,7 +102,7 @@ func configFile() (string, error) {
 func configDir() (string, error) {
 	// First prefer the HOME environmental variable
 	if home := os.Getenv("HOME"); home != "" {
-		log.Printf("Detected home directory from env var: %s", home)
+		log.Info("Detected home directory from env var: %s", home)
 		return home, nil
 	}
 

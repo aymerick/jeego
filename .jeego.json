@@ -2,5 +2,6 @@
   "serial_port": "/dev/tty.usbserial-A1014IM4",
   "domoticz_port": 8080,
   "domoticz_hardware_id": "1",
-  "debug": true
+  "log_level": "debug",
+  "log_file": "stdout"
 }
