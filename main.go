@@ -33,16 +33,16 @@ func newJeego() *Jeego {
 	log.Debug("Jeego config: %+v", config)
 
 	// load database
-	database, err := loadDatabase()
+	database, err := loadDatabase(config.DatabasePath)
 	if err != nil {
 		panic(log.Critical(err))
 	}
 
-	log.Info("Jeego database loaded with %d nodes", len(database.nodes))
+	log.Info("Jeego database loaded with %d nodes: %v", len(database.nodes), config.DatabasePath)
 
 	// debug
 	for _, node := range database.nodes {
-		log.Debug("%s <node %d> %s", node.Name, node.Id, node.textData())
+		node.logDebug(node.textData())
 	}
 
 	return &Jeego{
@@ -78,7 +78,7 @@ func setupLogging(loggingLevel, logFile string) {
 		flw := log.NewFileLogWriter(logFile, false)
 		log.AddFilter("file", level, flw)
 
-		flw.SetFormat("[%D %T] [%L] (%S) %M")
+		flw.SetFormat("[%D %T] [%L] %M")
 		flw.SetRotate(true)
 		flw.SetRotateSize(0)
 		flw.SetRotateLines(0)

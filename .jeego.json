@@ -3,5 +3,6 @@
   "domoticz_port": 8080,
   "domoticz_hardware_id": "1",
   "log_level": "debug",
-  "log_file": "stdout"
+  "log_file": "jeego.log",
+  "database_path": "./jeego.db"
 }

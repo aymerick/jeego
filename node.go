@@ -54,6 +54,16 @@ func init() {
 	}
 }
 
+// log formatted debug message
+func (node *Node) logDebug(msg string) {
+	nodeName := node.Name
+	if nodeName == "" {
+		nodeName = "Unnamed"
+	}
+
+	log.Debug("<node %d> %s %s", node.Id, nodeName, msg)
+}
+
 func (node *Node) handleData(data []byte) {
 	switch node.Kind {
 	case JEE_ROOM_NODE:
@@ -173,27 +183,47 @@ func (node *Node) textData() string {
 	result := ""
 
 	if node.haveSensor(TEMP_SENSOR) {
-		result += " | Temperature: " + strconv.FormatFloat(float64(node.Temperature), 'f', 1, 64)
+		result += "Temperature: " + strconv.FormatFloat(float64(node.Temperature), 'f', 1, 64)
 	}
 
 	if node.haveSensor(HUMI_SENSOR) {
-		result += " | Humidity: " + strconv.Itoa(int(node.Humidity))
+		if result != "" {
+			result += " | "
+		}
+
+		result += "Humidity: " + strconv.Itoa(int(node.Humidity))
 	}
 
 	if node.haveSensor(LIGHT_SENSOR) {
-		result += " | Light: " + strconv.Itoa(int(node.Light))
+		if result != "" {
+			result += " | "
+		}
+
+		result += "Light: " + strconv.Itoa(int(node.Light))
 	}
 
 	if node.haveSensor(MOTION_SENSOR) {
-		result += " | Motion: " + strconv.FormatBool(node.Motion)
+		if result != "" {
+			result += " | "
+		}
+
+		result += "Motion: " + strconv.FormatBool(node.Motion)
 	}
 
 	if node.haveSensor(LOWBAT_SENSOR) {
-		result += " | LowBattery: " + strconv.FormatBool(node.LowBattery)
+		if result != "" {
+			result += " | "
+		}
+
+		result += "LowBattery: " + strconv.FormatBool(node.LowBattery)
 	}
 
 	if node.haveSensor(VCC_SENSOR) {
-		result += " | Vcc: " + strconv.Itoa(node.Vcc)
+		if result != "" {
+			result += " | "
+		}
+
+		result += "Vcc: " + strconv.Itoa(node.Vcc)
 	}
 
 	return result

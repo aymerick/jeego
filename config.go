@@ -22,7 +22,8 @@ const defaultConfig = `
 	"serial_baud": 57600,
 	"domoticz_port": 8080,
 	"log_level": "warn",
-	"log_file": "stdout"
+	"log_file": "stdout",
+	"database_path": "./jeego.db"
 }
 `
 
@@ -34,6 +35,7 @@ type Config struct {
 	DomoticzHardwareId string `json:"domoticz_hardware_id"`
 	LogLevel           string `json:"log_level"`
 	LogFile            string `json:"log_file"`
+	DatabasePath       string `json:"database_path"`
 }
 
 // borrowed from https://github.com/mitchellh/packer

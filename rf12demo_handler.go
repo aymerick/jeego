@@ -30,20 +30,20 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 					node = jeego.database.insertNode(nodeId, nodeKind)
 
 					// debug
-					logDebugMsgForNode(node, "New node added to database")
+					node.logDebug("Added to database")
 				}
 
 				// handle data
 				node.handleData(data)
 
 				// debug
-				logDebugMsgForNode(node, node.textData())
+				node.logDebug(node.textData())
 
 				// update database
 				jeego.database.updateNode(node)
 
 				// debug
-				logDebugMsgForNode(node, "Node updated into database")
+				node.logDebug("Updated into database")
 
 				// push to domoticz
 				go pushToDomoticz(jeego.config, node)
@@ -52,11 +52,6 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 	}()
 
 	return inputChan
-}
-
-// log formatted debug message
-func logDebugMsgForNode(node *Node, msg string) {
-	log.Debug("%s <node %d> %s", node.Name, node.Id, msg)
 }
 
 // Parse a line received from central node

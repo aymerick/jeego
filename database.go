@@ -51,9 +51,9 @@ type DBValue struct {
 }
 
 // Setup a new database connection and load nodes
-func loadDatabase() (*Database, error) {
+func loadDatabase(databasePath string) (*Database, error) {
 	// open
-	sqlDriver, err := sql.Open("sqlite3", "./jeego.db")
+	sqlDriver, err := sql.Open("sqlite3", databasePath)
 	if err != nil {
 		return nil, err
 	}
@@ -234,8 +234,6 @@ func (db *Database) insertLog(node *Node) {
 		}
 		query += ")"
 
-		// log.Printf("[insertLog] %s with %v", query, args)
-
 		_, err := db.driver.Exec(query, args...)
 		if err != nil {
 			panic(log.Critical(err))
@@ -271,8 +269,6 @@ func (db *Database) trimLogs(history time.Duration) {
 	trimTo := time.Now().UTC().Add(-history).Unix()
 
 	query := "DELETE FROM logs WHERE (at < ?)"
-
-	// log.Printf("[trimLogs] %s with %v", query, trimTo)
 
 	_, err := db.driver.Exec(query, trimTo)
 	if err != nil {
