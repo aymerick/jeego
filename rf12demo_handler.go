@@ -4,7 +4,6 @@ import (
 	log "code.google.com/p/log4go"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -80,12 +79,15 @@ func runRf12demoLogger(jeego *Jeego) chan string {
 	go func() {
 		var line string
 
-		// @todo Use a log4go logger that can rotate files
-		f, err := os.Create(jeego.config.Rf12demoLogFile)
-		if err != nil {
-			panic(log.Critical(err))
-		}
-	    defer f.Close()
+		flw := log.NewFileLogWriter(jeego.config.Rf12demoLogFile, false)
+		flw.SetFormat("%M")
+		flw.SetRotate(true)
+		flw.SetRotateSize(0)
+		flw.SetRotateLines(0)
+		flw.SetRotateDaily(true)
+
+		rawLogger := log.NewDefaultLogger(log.DEBUG)
+		rawLogger.AddFilter("file", log.INFO, flw)
 
 	    log.Info("Logging RF12demo data to file: %s", jeego.config.Rf12demoLogFile)
 
@@ -93,11 +95,7 @@ func runRf12demoLogger(jeego *Jeego) chan string {
 		for {
 			line = <- inputChan
 
-			_, err := f.WriteString(fmt.Sprintf("%s\n", line))
-			if err != nil {
-				panic(log.Critical(err))
-			}
-		    f.Sync()
+			rawLogger.Info(line)
 		}
 	}()
 
