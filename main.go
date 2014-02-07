@@ -85,8 +85,7 @@ func setupLogging(loggingLevel, logFile string) {
 		flw.SetRotateDaily(true)
 	}
 
-
-	log.Info("Redirectoring logging to %s", logFile)
+	log.Info("Logging to file: %s", logFile)
 }
 
 func main() {
@@ -100,6 +99,9 @@ func main() {
 	jeego.database.startLogsTicker(time.Minute * LOG_PERIOD, time.Hour * 24 * LOG_HISTORY)
 
 	// @todo Save nodes values to database every day
+
+	// start web server
+	runWebServer(jeego)
 
 	// start handler
 	handlerChan := runRf12demoHandler(jeego)

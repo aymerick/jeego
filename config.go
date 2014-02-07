@@ -21,9 +21,10 @@ const defaultConfig = `
 	"serial_port": "/dev/ttyUSB0",
 	"serial_baud": 57600,
 	"domoticz_port": 8080,
-	"log_level": "warn",
+	"log_level": "info",
 	"log_file": "stdout",
-	"database_path": "./jeego.db"
+	"database_path": "./jeego.db",
+	"web_server_port": 3000
 }
 `
 
@@ -36,6 +37,8 @@ type Config struct {
 	LogLevel           string `json:"log_level"`
 	LogFile            string `json:"log_file"`
 	DatabasePath       string `json:"database_path"`
+	WebServerPort      int    `json:"web_server_port"`
+	Rf12demoLogFile    string `json:"rf12demo_log_file"`
 }
 
 // borrowed from https://github.com/mitchellh/packer
@@ -104,7 +107,7 @@ func configFile() (string, error) {
 func configDir() (string, error) {
 	// First prefer the HOME environmental variable
 	if home := os.Getenv("HOME"); home != "" {
-		log.Info("Detected home directory from env var: %s", home)
+		log.Debug("Detected home directory from env var: %s", home)
 		return home, nil
 	}
 

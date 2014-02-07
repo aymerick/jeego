@@ -11,7 +11,7 @@ import (
 const DOMOTICZ_DEVICE_ID_BASE = 2000
 
 //
-// Device is created dynamically by using those parameters instead of 'idx':
+// Device can be created dynamically by using those parameters instead of 'idx':
 //  hid: HardwareID
 //  did: DeviceID
 //  dunit: Unit
@@ -28,6 +28,7 @@ const DOMOTICZ_DEVICE_ID_BASE = 2000
 //  http://pikan.local:8080/json.htm?type=command&param=udevice&hid=1&did=4000&dunit=4&dtype=82&dsubtype=1&nvalue=0&svalue=12.3;99;0
 //
 // Example Temp:
+//  ...
 //  dtype: 80   => pTypeTEMP 0x50 (temperature)
 //  dsubtype: 1 => sTypeTEMP1 0x1  //THR128/138,THC138
 //
@@ -37,18 +38,20 @@ func pushToDomoticz(config *Config, node *Node) {
 		if params != "" {
 			url := fmt.Sprintf("http://%s:%d/json.htm?type=command&param=udevice&%s", config.DomoticzHost, config.DomoticzPort, params)
 
-			log.Debug("[%s] Pushing to domoticz: %s", node.Name, url)
+			node.logDebug(fmt.Sprintf("Pushing to domoticz: %s", url))
 
 			resp, err := http.Get(url)
 			if err != nil {
+				// @todo node.logWarn(...)
 				log.Warn("[%s] Failed to push value to domoticz", node.Name)
 			} else {
 				respText, err := ioutil.ReadAll(resp.Body)
 				resp.Body.Close()
 				if err != nil {
+					// @todo node.logWarn(...)
 					log.Warn("[%s] Failed to get domoticz response", node.Name)
 				} else {
-					log.Debug("[%s] Domoticz response: %s", node.Name, respText)
+					node.logDebug(fmt.Sprintf("Domoticz response: %s", respText))
 				}
 			}
 		}

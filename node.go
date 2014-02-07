@@ -31,19 +31,19 @@ var SensorsForKind map[int]Sensor
 
 // Node
 type Node struct {
-	Id          int
-	Kind        int
-	UpdatedAt   time.Time
-	Name        string
-	DomoticzIdx string
+	Id          int       `json:"id"`
+	Kind        int       `json:"kind"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Name        string    `json:"name"`
+	DomoticzIdx string    `json:"domoticz_idx,omitempty"`
 
 	// sensors
-	Temperature float64
-	Humidity    uint8
-	Light       uint8
-	Motion      bool
-	LowBattery  bool
-	Vcc         int
+	Temperature float64   `json:"temperature,omitempty"`
+	Humidity    uint8     `json:"humidity,omitempty"`
+	Light       uint8     `json:"light,omitempty"`
+	Motion      bool      `json:"motion,omitempty"`
+	LowBattery  bool      `json:"low_battery,omitempty"`
+	Vcc         int       `json:"vcc,omitempty"`
 }
 
 func init() {
@@ -61,7 +61,7 @@ func (node *Node) logDebug(msg string) {
 		nodeName = "Unnamed"
 	}
 
-	log.Debug("<node %d> %s %s", node.Id, nodeName, msg)
+	log.Debug("[node %d][%s] %s", node.Id, nodeName, msg)
 }
 
 func (node *Node) handleData(data []byte) {

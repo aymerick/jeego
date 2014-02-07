@@ -3,38 +3,57 @@ package main
 import (
 	log "code.google.com/p/log4go"
 	"errors"
+	"fmt"
+	"os"
 	"strconv"
 	"strings"
+	"time"
 )
+
+// Rf12demo Data Log
+type Rf12demoDataLog struct {
+	nodeId   int
+	nodeKind int
+	data     []byte
+	at       time.Time
+}
 
 // Start RF12demo handler
 func runRf12demoHandler(jeego *Jeego) chan string {
 	inputChan := make(chan string, 1)
 
 	go func() {
-		var line string
+		var line       string
+		var loggerChan chan string
+
+		if jeego.config.Rf12demoLogFile != "" {
+			loggerChan = runRf12demoLogger(jeego)
+		}
 
 		// loop forever
 		for {
 			line = <-inputChan
 
 			// parse node infos and data
-			nodeId, nodeKind, data, err := parseLine(line)
+			dataLog, err := parseLine(line)
 			if err == nil {
-				// @todo log raw data to file
+				if loggerChan != nil {
+					// log raw data log
+					loggerChan <- fmt.Sprintf("[%s] %s", dataLog.at.Format(time.RFC3339), line)
+				}
 
 				// get node
-				node := jeego.database.nodeForId(nodeId)
+				node := jeego.database.nodeForId(dataLog.nodeId)
 				if node == nil {
 					// insert new node in database
-					node = jeego.database.insertNode(nodeId, nodeKind)
+					node = jeego.database.insertNode(dataLog.nodeId, dataLog.nodeKind)
 
 					// debug
 					node.logDebug("Added to database")
 				}
 
 				// handle data
-				node.handleData(data)
+				node.handleData(dataLog.data)
 
 				// debug
 				node.logDebug(node.textData())
@@ -48,6 +67,37 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 				// push to domoticz
 				go pushToDomoticz(jeego.config, node)
 			}
+		}
+	}()
+
+	return inputChan
+}
+
+// Start RF12demo logger
+func runRf12demoLogger(jeego *Jeego) chan string {
+	inputChan := make(chan string, 1)
+
+	go func() {
+		var line string
+
+		// @todo Use a log4go logger that can rotate files
+		f, err := os.Create(jeego.config.Rf12demoLogFile)
+		if err != nil {
+			panic(log.Critical(err))
+		}
+	    defer f.Close()
+
+	    log.Info("Logging RF12demo data to file: %s", jeego.config.Rf12demoLogFile)
+
+		// loop forever
+		for {
+			line = <- inputChan
+
+			_, err := f.WriteString(fmt.Sprintf("%s\n", line))
+			if err != nil {
+				panic(log.Critical(err))
+			}
+		    f.Sync()
 		}
 	}()
 
@@ -78,31 +128,34 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 //      ^   -------------------------
 // reserved            ^
 //               node kind => 3
-func parseLine(line string) (nodeId int, nodeKind int, data []byte, err error) {
+func parseLine(line string) (dataLog *Rf12demoDataLog, err error) {
 	// split line
 	dataStrArray := strings.Split(line, " ")
 
 	// parse status
 	if (len(dataStrArray) > 3) && (dataStrArray[0] == "OK") {
-		// parse node id
-		nodeId = int(byteFromString(dataStrArray[1]) & 0x1f)
-
 		// parse node infos
 		nodeInfosByte := byteFromString(dataStrArray[2])
 
 		// check reserved field
 		if (nodeInfosByte & 0x80) != 0 {
-			log.Warn("Received payload with reserved field set to 1")
+			err = errors.New("Received payload with reserved field set to 1")
+			log.Error(err)
 		} else {
+			dataLog = &Rf12demoDataLog{ at: time.Now().UTC() }
+
+			// parse node id
+			dataLog.nodeId = int(byteFromString(dataStrArray[1]) & 0x1f)
+
 			// parse node kind
-			nodeKind = int(nodeInfosByte & 0x7f)
+			dataLog.nodeKind = int(nodeInfosByte & 0x7f)
 
 			// parse data
-			data = make([]byte, len(dataStrArray)-3)
+			dataLog.data = make([]byte, len(dataStrArray)-3)
 
 			for index, dataStr := range dataStrArray {
 				if index > 2 {
-					data[index-3] = byteFromString(dataStr)
+					dataLog.data[index-3] = byteFromString(dataStr)
 				}
 			}
 		}

@@ -43,7 +43,7 @@
 // Build circuit:
 //   - Try on a stripboard with: http://nathan.chantrell.net/downloads/arduino/tinytx/tinytx_stripboard_ds18b20.png
 //
-//   - If the sketch is stuck during call to rf12_sendWait then Burn Bootloader to fix the issue\
+//   - If the sketch is stuck during call to rf12_sendWait then Burn Bootloader to fix the issue
 //
 
 #include <JeeLib.h>            // https://github.com/jcw/jeelib

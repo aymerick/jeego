@@ -2,22 +2,25 @@ package main
 
 import (
 	log "code.google.com/p/log4go"
+	"fmt"
 	"github.com/codegangsta/martini"
+	"github.com/codegangsta/martini-contrib/render"
+	"net/http"
 )
 
-func runWebServer(database *Database) {
-	m := martini.Classic()
+func runWebServer(jeego *Jeego) {
+	go func() {
+		log.Info("Starting web server on port %d", jeego.config.WebServerPort)
 
-	m.Get("/", func() string {
-		result := ""
+		m := martini.Classic()
+		m.Use(render.Renderer())
 
-		for _, node := range database.nodes {
-			result += node.textData()
-		}
+		// API: nodes list
+		m.Get("/api/nodes", func(r render.Render) {
+			r.JSON(200, map[string]interface{}{"nodes": jeego.database.nodes})
+		})
 
-		return result
-	})
-
-	log.Info("Starting web server runloop")
-	m.Run()
+		addr := fmt.Sprintf(":%d", jeego.config.WebServerPort)
+		http.ListenAndServe(addr, m)
+	}()
 }

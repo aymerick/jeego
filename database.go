@@ -259,7 +259,7 @@ func (db *Database) startLogsTicker(period time.Duration, history time.Duration)
 		for _ = range db.logsTicker.C {
 			db.insertLogs()
 
-			db.trimLogs(history);
+			db.trimLogs(history)
 		}
 	}()
 }

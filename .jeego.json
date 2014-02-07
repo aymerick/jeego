@@ -4,5 +4,7 @@
   "domoticz_hardware_id": "1",
   "log_level": "debug",
   "log_file": "jeego.log",
-  "database_path": "./jeego.db"
+  "database_path": "./jeego.db",
+  "web_server_port": 3000,
+  "rf12demo_log_file": "rf12demo.log"
 }
