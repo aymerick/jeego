@@ -13,6 +13,8 @@ const (
 	JEE_ROOM_NODE = iota + 1
 	JEE_THL_NODE
 	TINY_TEMP_NODE
+	TINY_TH_NODE
+	TINY_TL_NODE
 )
 
 // sensors kinds
@@ -51,6 +53,8 @@ func init() {
 		JEE_ROOM_NODE:  TEMP_SENSOR + HUMI_SENSOR + LIGHT_SENSOR + LOWBAT_SENSOR + MOTION_SENSOR,
 		JEE_THL_NODE:   TEMP_SENSOR + HUMI_SENSOR + LIGHT_SENSOR + LOWBAT_SENSOR,
 		TINY_TEMP_NODE: TEMP_SENSOR + VCC_SENSOR,
+		TINY_TH_NODE:   TEMP_SENSOR + HUMI_SENSOR + VCC_SENSOR,
+		TINY_TL_NODE:   TEMP_SENSOR + LIGHT_SENSOR + VCC_SENSOR,
 	}
 }
 
@@ -72,6 +76,10 @@ func (node *Node) handleData(data []byte) {
 		node.handleJeeThlNodeData(data)
 	case TINY_TEMP_NODE:
 		node.handleTinyTempNodeData(data)
+	case TINY_TH_NODE:
+		node.handleTinyThNodeData(data)
+	case TINY_TL_NODE:
+		node.handleTinyTlNodeData(data)
 	default:
 		log.Error(fmt.Sprintf("Unsupported node kind: %d;", node.Kind))
 	}
@@ -166,15 +174,76 @@ func (node *Node) handleJeeThlNodeData(data []byte) {
 //
 func (node *Node) handleTinyTempNodeData(data []byte) {
 	if len(data) == 3 {
-		var vcc int = (int(data[1]&0x0F) << 8) + int(data[0])
 		var temperature int = (int(data[1]&0xF0) >> 4) + (int(data[2]&0x3F) << 4)
 		if temperature > 512 {
 			// negative value
 			temperature = temperature - 1024
 		}
 
-		node.Vcc = vcc
+		node.Vcc = (int(data[1]&0x0F) << 8) + int(data[0])
 		node.Temperature = float64(temperature) / 10
+	}
+}
+
+//
+// Example of data bytes decoding: 92 44 145 12
+//
+//              92 => 0 1 0 1 1 1 0 0
+//              44 => 0 0 1 0 1 1 0 0
+//             145 => 1 0 0 1 0 0 0 1
+//              12 => 0 0 0 0 1 1 0 0
+//
+//               vcc: 0 1 0 1 1 1 0 0
+//                            1 1 0 0 => 3164 mv
+//       temperature: 0 0 1 0
+//                        0 1 0 0 0 1 => 274 / 10 = 27.4
+//          humidity: 1 0
+//                          0 1 1 0 0 => 50
+//        <not used>: 0 0 0
+//
+func (node *Node) handleTinyThNodeData(data []byte) {
+	if len(data) == 4 {
+		var temperature int = (int(data[1]&0xF0) >> 4) + (int(data[2]&0x3F) << 4)
+		if temperature > 512 {
+			// negative value
+			temperature = temperature - 1024
+		}
+
+		node.Vcc = (int(data[1]&0x0F) << 8) + int(data[0])
+		node.Temperature = float64(temperature) / 10
+		node.Humidity = (uint8(data[2]&0xC0) >> 6) + (uint8(data[2]&0x1F) << 2)
+	}
+}
+
+//
+// Example of data bytes decoding: 83 92 79 60
+//
+//              83 => 0 1 0 1 0 0 1 1
+//              92 => 0 1 0 1 1 1 0 0
+//              79 => 0 1 0 0 1 1 1 1
+//              60 => 0 0 1 1 1 1 0 0
+//
+//               vcc: 0 1 0 1 0 0 1 1
+//                            1 1 0 0 => 3155 mv
+//       temperature: 0 1 0 1
+//                        0 0 1 1 1 1 => 243 / 10 = 24.3
+//             light: 0 1
+//                        1 1 1 1 0 0 => 241 * 100 / 255 = 94
+//        <not used>: 0 0
+//
+func (node *Node) handleTinyTlNodeData(data []byte) {
+	if len(data) == 4 {
+		var temperature int = (int(data[1]&0xF0) >> 4) + (int(data[2]&0x3F) << 4)
+		if temperature > 512 {
+			// negative value
+			temperature = temperature - 1024
+		}
+
+		var light int = (int(data[2]&0xC0) >> 6) + (int(data[3]&0x3F) << 2)
+
+		node.Vcc = (int(data[1]&0x0F) << 8) + int(data[0])
+		node.Temperature = float64(temperature) / 10
+		node.Light = uint8((int(light) * 100) / 255)
 	}
 }
 

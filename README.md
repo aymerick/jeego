@@ -69,5 +69,7 @@ Nodes kinds
 ===========
 
 - jeeRoomNode: [jeenode] Jeelabs official Room Board (http://jeelabs.com/products/room-board)
-- jeeThlNode: [jeenode] "Temperature Humidity Light" with DHT22 and LDR
-- tinyTempNode: [TinyTX] Temperature with DS18B20 (http://nathan.chantrell.net/tinytx-wireless-sensor/)
+- jeeThlNode: [jeenode] Temperature, Humidity and Light with DHT22 and LDR
+- tinyTempNode: [TinyTX] Temperature with DS18B20
+- tinyThNode: [TinyTX] Temperature and Humidity with DHT22
+- tinyTlNode: [TinyTX] Temperature with DS18B20 and Light with LDR
