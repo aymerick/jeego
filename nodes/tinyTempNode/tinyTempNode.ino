@@ -180,6 +180,36 @@ long readVcc() {
   return result;
 }
 
+// read OneWire data
+void readOneWire() {
+  // power on sensor
+  digitalWrite(ONE_WIRE_POWER_PIN, HIGH);
+
+  // allow 5ms for the sensor to be ready
+  delay(5);
+
+  // start up temp sensor
+  sensors.begin();
+
+  // get the temperature
+  sensors.requestTemperatures();
+
+  // temperature value is send in payload on 10bits, so we keep only temperatures between -51.2 and 51.2
+  short int temp = (sensors.getTempCByIndex(0)*10);
+
+  if (temp > 512) {
+    temp = 512;
+  }
+  if (temp < -512) {
+    temp = -512;
+  }
+
+  payload.temp = temp;
+
+  // power off sensor
+  digitalWrite(ONE_WIRE_POWER_PIN, LOW);
+}
+
 
 //
 // Main
@@ -207,32 +237,8 @@ void setup() {
 }
 
 void loop() {
-  // power on sensor
-  digitalWrite(ONE_WIRE_POWER_PIN, HIGH);
-
-  // allow 5ms for the sensor to be ready
-  delay(5);
-
-  // start up temp sensor
-  sensors.begin();
-
-  // get the temperature
-  sensors.requestTemperatures();
-
-  // temperature value is send in payload on 10bits, so we keep only temperatures between -51.2 and 51.2
-  short int temp = (sensors.getTempCByIndex(0)*10);
-
-  if (temp > 512) {
-    temp = 512;
-  }
-  if (temp < -512) {
-    temp = -512;
-  }
-
-  payload.temp = temp;
-
-  // power off sensor
-  digitalWrite(ONE_WIRE_POWER_PIN, LOW);
+  // read sensor
+  readOneWire();
 
   // get supply voltage
   payload.vcc = readVcc();
