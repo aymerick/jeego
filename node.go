@@ -10,26 +10,26 @@ import (
 
 // node kinds
 const (
-	JEE_ROOM_NODE = iota + 1
-	JEE_THL_NODE
-	TINY_TEMP_NODE
-	TINY_TH_NODE
-	TINY_TL_NODE
+	JEENODE_THLM_NODE = iota + 1 // Jeenode: Temperature Humidity Light Motion
+	JEENODE_THL_NODE             // Jeenode: Temperature Humidity Light
+	TINYTX_T_NODE                //  TinyTX: Temperature
+	TINYTX_TH_NODE               //  TinyTX: Temperature Humidity
+	TINYTX_TL_NODE               //  TinyTX: Temperature Light
 )
 
 // sensors kinds
 const (
-	TEMP_SENSOR   = 1 << iota
-	HUMI_SENSOR   = 1 << iota
-	LIGHT_SENSOR  = 1 << iota
-	MOTION_SENSOR = 1 << iota
-	LOWBAT_SENSOR = 1 << iota
-	VCC_SENSOR    = 1 << iota
+	TEMP_SENSOR   = 1 << iota // Temperature
+	HUMI_SENSOR   = 1 << iota // Humidity
+	LIGHT_SENSOR  = 1 << iota // Light
+	MOTION_SENSOR = 1 << iota // Motion
+	LOWBAT_SENSOR = 1 << iota // Low Battery
+	VCC_SENSOR    = 1 << iota // Supply voltage
 )
 
 type Sensor uint
 
-var SensorsForKind map[int]Sensor
+var SensorsForNodeKind map[int]Sensor
 
 // Node
 type Node struct {
@@ -49,12 +49,12 @@ type Node struct {
 }
 
 func init() {
-	SensorsForKind = map[int]Sensor{
-		JEE_ROOM_NODE:  TEMP_SENSOR + HUMI_SENSOR + LIGHT_SENSOR + LOWBAT_SENSOR + MOTION_SENSOR,
-		JEE_THL_NODE:   TEMP_SENSOR + HUMI_SENSOR + LIGHT_SENSOR + LOWBAT_SENSOR,
-		TINY_TEMP_NODE: TEMP_SENSOR + VCC_SENSOR,
-		TINY_TH_NODE:   TEMP_SENSOR + HUMI_SENSOR + VCC_SENSOR,
-		TINY_TL_NODE:   TEMP_SENSOR + LIGHT_SENSOR + VCC_SENSOR,
+	SensorsForNodeKind = map[int]Sensor{
+		JEENODE_THLM_NODE: TEMP_SENSOR + HUMI_SENSOR + LIGHT_SENSOR + MOTION_SENSOR + LOWBAT_SENSOR,
+		JEENODE_THL_NODE:  TEMP_SENSOR + HUMI_SENSOR + LIGHT_SENSOR + LOWBAT_SENSOR,
+		TINYTX_T_NODE:     TEMP_SENSOR + VCC_SENSOR,
+		TINYTX_TH_NODE:    TEMP_SENSOR + HUMI_SENSOR + VCC_SENSOR,
+		TINYTX_TL_NODE:    TEMP_SENSOR + LIGHT_SENSOR + VCC_SENSOR,
 	}
 }
 
@@ -70,15 +70,15 @@ func (node *Node) logDebug(msg string) {
 
 func (node *Node) handleData(data []byte) {
 	switch node.Kind {
-	case JEE_ROOM_NODE:
-		node.handleJeeRoomNodeData(data)
-	case JEE_THL_NODE:
-		node.handleJeeThlNodeData(data)
-	case TINY_TEMP_NODE:
-		node.handleTinyTempNodeData(data)
-	case TINY_TH_NODE:
+	case JEENODE_THLM_NODE:
+		node.handleJeeNodeThlmData(data)
+	case JEENODE_THL_NODE:
+		node.handleJeeNodeThlData(data)
+	case TINYTX_T_NODE:
+		node.handleTinyTNodeData(data)
+	case TINYTX_TH_NODE:
 		node.handleTinyThNodeData(data)
-	case TINY_TL_NODE:
+	case TINYTX_TL_NODE:
 		node.handleTinyTlNodeData(data)
 	default:
 		log.Error(fmt.Sprintf("Unsupported node kind: %d;", node.Kind))
@@ -86,7 +86,7 @@ func (node *Node) handleData(data []byte) {
 }
 
 func (node *Node) haveSensor(sensor Sensor) bool {
-	return ((SensorsForKind[node.Kind] & sensor) != 0)
+	return ((SensorsForNodeKind[node.Kind] & sensor) != 0)
 }
 
 //
@@ -105,15 +105,7 @@ func (node *Node) haveSensor(sensor Sensor) bool {
 //       low battery:           0     => false
 //        <not used>: 0 0 0 0 0
 //
-// References:
-//   - http://jeelabs.org/2011/06/09/rf12-packet-format-and-design/
-//   - http://jeelabs.org/2011/01/14/nodes-addresses-and-interference/
-//   - http://jeelabs.org/2010/12/07/binary-packet-decoding/
-//   - http://jeelabs.org/2010/12/08/binary-packet-decoding-–-part-2/
-//   - http://jeelabs.org/2013/09/05/decoding-bit-fields/
-//   - http://jeelabs.org/2013/09/06/decoding-bit-fields-part-2/
-//
-func (node *Node) handleJeeRoomNodeData(data []byte) {
+func (node *Node) handleJeeNodeThlmData(data []byte) {
 	if len(data) == 4 {
 		var temperature int = ((256 * (int(data[3]) & 3)) + int(data[2]))
 		if temperature > 512 {
@@ -144,7 +136,7 @@ func (node *Node) handleJeeRoomNodeData(data []byte) {
 //                                0 0 => 210 / 10 = 21.0
 //        <not used>: 0 0 0 0 0 0
 //
-func (node *Node) handleJeeThlNodeData(data []byte) {
+func (node *Node) handleJeeNodeThlData(data []byte) {
 	if len(data) == 4 {
 		var temperature int = ((256 * (int(data[3]) & 3)) + int(data[2]))
 		if temperature > 512 {
@@ -172,7 +164,7 @@ func (node *Node) handleJeeThlNodeData(data []byte) {
 //                        0 1 0 0 0 1 => 274 / 10 = 27.4
 //        <not used>: 0 0
 //
-func (node *Node) handleTinyTempNodeData(data []byte) {
+func (node *Node) handleTinyTNodeData(data []byte) {
 	if len(data) == 3 {
 		var temperature int = (int(data[1]&0xF0) >> 4) + (int(data[2]&0x3F) << 4)
 		if temperature > 512 {
