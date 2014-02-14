@@ -69,3 +69,32 @@ Nodes kinds
 ===========
 
 See [jeego-devices](https://github.com/aymerick/jeego-devices) repo.
+
+
+Todo
+====
+
+- Web API:
+  * List all nodes
+  * Get/Update/Delete a node
+  * Disable/enable a node sensor
+  * Set node sensor shift correction
+- Web client:
+  * Use Web API
+  * Display graphs, updated with websockets
+- Auto-shift-correction mode: select a list of nodes, puts them in the same room during 24h => automatically set sensors shift corrections
+- 'Room' concept (eg: you can have several temp sensors in the same room)
+- New sensors:
+  * Current usage
+  * Leak detector
+  * Smoke detector
+  * CO2 detector
+- Actuators:
+  * Light switch
+  * Squeezebox
+- Scenario engine (with LUA ?). Examples:
+  * Start radio on squeezebox in kitchen on first motion after 7:00 AM
+  * Switch on low dimmed toilets light on motion during the night
+- Daemonize jeego
+- Munin plugin
+- Debian package
