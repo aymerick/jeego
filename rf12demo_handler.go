@@ -49,6 +49,14 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 
 					// debug
 					node.logDebug("Added to database")
+				} else if node.Kind != dataLog.nodeKind {
+					// debug
+					node.logDebug(fmt.Sprintf("Kind changed from %d to %d", node.Kind, dataLog.nodeKind))
+
+					node.Kind = dataLog.nodeKind
+
+					// reset sensors values
+					node.resetSensors()
 				}
 
 				// handle data
@@ -59,9 +67,6 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 
 				// update database
 				jeego.database.updateNode(node)
-
-				// debug
-				node.logDebug("Updated into database")
 
 				// push to domoticz
 				go pushToDomoticz(jeego.config, node)

@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS logs (
 );
 `
 
+var ColNameForSensor map[Sensor]string
+
 // Database
 type Database struct {
 	driver     *sql.DB
@@ -44,10 +46,16 @@ type Database struct {
 	logsTicker *time.Ticker
 }
 
-// Database value
-type DBValue struct {
-	name  string
-	value interface{}
+// Init
+func init() {
+	ColNameForSensor = map[Sensor]string{
+		TEMP_SENSOR:   "temperature",
+		HUMI_SENSOR:   "humidity",
+		LIGHT_SENSOR:  "light",
+		MOTION_SENSOR: "motion",
+		LOWBAT_SENSOR: "lowbat",
+		VCC_SENSOR:    "vcc",
+	}
 }
 
 // Setup a new database connection and load nodes
@@ -111,6 +119,7 @@ func (db *Database) loadNodes() {
 			vcc          sql.NullInt64
 		)
 
+		// @todo Use github.com/russross/meddler ?
 		rows.Scan(&id, &kind, &updated_at, &name, &domoticz_idx, &temperature, &humidity, &light, &motion, &lowbat, &vcc)
 
 		// init node
@@ -149,7 +158,7 @@ func (db *Database) loadNodes() {
 		}
 
 		if vcc.Valid {
-			node.Vcc = int(vcc.Int64)
+			node.Vcc = uint(vcc.Int64)
 		}
 
 		// add node to list
@@ -170,6 +179,10 @@ func (db *Database) nodeForId(id int) *Node {
 	return nil
 }
 
+func insertNodeQuery(id int, kind int) (string, []interface{}) {
+	return "INSERT INTO nodes(id, kind) VALUES(?, ?)", []interface{}{ id, kind }
+}
+
 // Insert a new node
 func (db *Database) insertNode(id int, kind int) *Node {
 	// init node
@@ -179,7 +192,8 @@ func (db *Database) insertNode(id int, kind int) *Node {
 	db.nodes = append(db.nodes, node)
 
 	// persist in database
-	_, err := db.driver.Exec("INSERT INTO nodes(id, kind) VALUES(?, ?)", id, kind)
+	query, args := insertNodeQuery(id, kind)
+	_, err := db.driver.Exec(query, args...)
 	if err != nil {
 		panic(log.Critical(err))
 	}
@@ -187,25 +201,44 @@ func (db *Database) insertNode(id int, kind int) *Node {
 	return node
 }
 
+func updateNodeQuery(node *Node) (string, []interface{}) {
+	args := make([]interface{}, 0)
+
+	query := "UPDATE nodes SET updated_at = ?"
+	args = append(args, node.UpdatedAt.Unix())
+
+	// set sensors values
+	for _, sensor := range node.sensors() {
+		colName := ColNameForSensor[sensor]
+		if colName != "" {
+			value := node.sensorValue(sensor)
+
+			query += fmt.Sprintf(", %s = ?", colName)
+			args = append(args, value)
+		}
+	}
+
+	// set NULL for absent sensors
+	for _, sensor := range node.absentSensors() {
+		colName := ColNameForSensor[sensor]
+		if colName != "" {
+			query += fmt.Sprintf(", %s = NULL", colName)
+		}
+	}
+
+	query += " WHERE id = ?"
+	args = append(args, node.Id)
+
+	return query, args
+}
+
 // Update node
 func (db *Database) updateNode(node *Node) {
-	dbValues := node.dbValues()
-	if len(dbValues) > 0 {
+	if len(node.sensors()) > 0 {
 		node.UpdatedAt = time.Now().UTC()
 
-		args := make([]interface{}, 0)
-
-		query := "UPDATE nodes SET updated_at = ?"
-		args = append(args, node.UpdatedAt.Unix())
-
-		for _, dbValue := range dbValues {
-			query += fmt.Sprintf(", %s = ?", dbValue.name)
-			args = append(args, dbValue.value)
-		}
-
-		query += " WHERE id = ?"
-		args = append(args, node.Id)
-
+		// persist in database
+		query, args := updateNodeQuery(node)
 		_, err := db.driver.Exec(query, args...)
 		if err != nil {
 			panic(log.Critical(err))
@@ -213,27 +246,39 @@ func (db *Database) updateNode(node *Node) {
 	}
 }
 
+func insertLogQuery(node *Node) (string, []interface{}) {
+	args := make([]interface{}, 0)
+
+	query := "INSERT INTO logs(node_id, at"
+	args = append(args, node.Id)
+	args = append(args, time.Now().UTC().Unix())
+
+	nbSensors := 0
+
+	for _, sensor := range node.sensors() {
+		colName := ColNameForSensor[sensor]
+		if colName != "" {
+			query += fmt.Sprintf(", %s", colName)
+			args = append(args, node.sensorValue(sensor))
+
+			nbSensors += 1
+		}
+	}
+
+	query += ") VALUES(?, ?"
+	for i := 0; i < nbSensors; i++ {
+		query += ", ?"
+	}
+	query += ")"
+
+	return query, args
+}
+
 // Insert log for given node
 func (db *Database) insertLog(node *Node) {
-	dbValues := node.dbValues()
-	if len(dbValues) > 0 {
-		args := make([]interface{}, 0)
-
-		query := "INSERT INTO logs(node_id, at"
-		args = append(args, node.Id)
-		args = append(args, time.Now().UTC().Unix())
-
-		for _, dbValue := range dbValues {
-			query += fmt.Sprintf(", %s", dbValue.name)
-			args = append(args, dbValue.value)
-		}
-
-		query += ") VALUES(?, ?"
-		for i := 0; i < len(dbValues); i++ {
-			query += ", ?"
-		}
-		query += ")"
-
+	if len(node.sensors()) > 0 {
+		// persist in database
+		query, args := insertLogQuery(node)
 		_, err := db.driver.Exec(query, args...)
 		if err != nil {
 			panic(log.Critical(err))

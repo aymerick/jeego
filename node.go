@@ -4,7 +4,6 @@ import (
 	log "code.google.com/p/log4go"
 	"fmt"
 	"math"
-	"strconv"
 	"time"
 )
 
@@ -19,17 +18,19 @@ const (
 
 // sensors kinds
 const (
-	TEMP_SENSOR   = 1 << iota // Temperature
-	HUMI_SENSOR   = 1 << iota // Humidity
-	LIGHT_SENSOR  = 1 << iota // Light
-	MOTION_SENSOR = 1 << iota // Motion
-	LOWBAT_SENSOR = 1 << iota // Low Battery
-	VCC_SENSOR    = 1 << iota // Supply voltage
+	TEMP_SENSOR = iota // Temperature
+	HUMI_SENSOR        // Humidity
+	LIGHT_SENSOR       // Light
+	MOTION_SENSOR      // Motion
+	LOWBAT_SENSOR      // Low Battery
+	VCC_SENSOR         // Supply voltage
 )
 
 type Sensor uint
 
-var SensorsForNodeKind map[int]Sensor
+var AllSensors []Sensor
+var SensorsForNodeKind map[int][]Sensor
+var BitsNbForSensor map[Sensor]int
 
 // Node
 type Node struct {
@@ -45,16 +46,27 @@ type Node struct {
 	Light       uint8     `json:"light,omitempty"`
 	Motion      bool      `json:"motion,omitempty"`
 	LowBattery  bool      `json:"low_battery,omitempty"`
-	Vcc         int       `json:"vcc,omitempty"`
+	Vcc         uint      `json:"vcc,omitempty"`
 }
 
 func init() {
-	SensorsForNodeKind = map[int]Sensor{
-		JEENODE_THLM_NODE: TEMP_SENSOR + HUMI_SENSOR + LIGHT_SENSOR + MOTION_SENSOR + LOWBAT_SENSOR,
-		JEENODE_THL_NODE:  TEMP_SENSOR + HUMI_SENSOR + LIGHT_SENSOR + LOWBAT_SENSOR,
-		TINYTX_T_NODE:     TEMP_SENSOR + VCC_SENSOR,
-		TINYTX_TH_NODE:    TEMP_SENSOR + HUMI_SENSOR + VCC_SENSOR,
-		TINYTX_TL_NODE:    TEMP_SENSOR + LIGHT_SENSOR + VCC_SENSOR,
+	AllSensors = []Sensor{ TEMP_SENSOR, HUMI_SENSOR, LIGHT_SENSOR, MOTION_SENSOR, LOWBAT_SENSOR, VCC_SENSOR }
+
+	SensorsForNodeKind = map[int][]Sensor{
+		JEENODE_THLM_NODE: { TEMP_SENSOR, HUMI_SENSOR, LIGHT_SENSOR, MOTION_SENSOR, LOWBAT_SENSOR },
+		JEENODE_THL_NODE:  { TEMP_SENSOR, HUMI_SENSOR, LIGHT_SENSOR, LOWBAT_SENSOR },
+		TINYTX_T_NODE:     { TEMP_SENSOR, VCC_SENSOR },
+		TINYTX_TH_NODE:    { TEMP_SENSOR, HUMI_SENSOR, VCC_SENSOR },
+		TINYTX_TL_NODE:    { TEMP_SENSOR, LIGHT_SENSOR, VCC_SENSOR },
+	}
+
+	BitsNbForSensor = map[Sensor]int{
+		TEMP_SENSOR:   10, // [10 bits] Temperature: -512..+512 (tenths)
+		HUMI_SENSOR:    7, //  [7 bits] Humidity: 0..100
+		LIGHT_SENSOR:   8, //  [8 bits] Light: 0..255
+		MOTION_SENSOR:  1, //   [1 bit] Motion: 0..1
+		LOWBAT_SENSOR:  1, //   [1 bit] Low Battery: 0..1
+		VCC_SENSOR:    12, // [12 bits] Supply voltage: 0..4095 mV
 	}
 }
 
@@ -68,260 +80,233 @@ func (node *Node) logDebug(msg string) {
 	log.Debug("[node %d][%s] %s", node.Id, nodeName, msg)
 }
 
-func (node *Node) handleData(data []byte) {
-	switch node.Kind {
-	case JEENODE_THLM_NODE:
-		node.handleJeeNodeThlmData(data)
-	case JEENODE_THL_NODE:
-		node.handleJeeNodeThlData(data)
-	case TINYTX_T_NODE:
-		node.handleTinyTNodeData(data)
-	case TINYTX_TH_NODE:
-		node.handleTinyThNodeData(data)
-	case TINYTX_TL_NODE:
-		node.handleTinyTlNodeData(data)
-	default:
-		log.Error(fmt.Sprintf("Unsupported node kind: %d;", node.Kind))
-	}
+// return all sensors
+func (node *Node) sensors() []Sensor {
+	return SensorsForNodeKind[node.Kind]
 }
 
+// return all absent sensors
+func (node *Node) absentSensors() []Sensor {
+	result := make([]Sensor, 0)
+
+	for _, sensor := range AllSensors {
+		if !node.haveSensor(sensor) {
+			result = append(result, sensor)
+		}
+	}
+
+	return result
+}
+
+// check if node have given sensor
 func (node *Node) haveSensor(sensor Sensor) bool {
-	return ((SensorsForNodeKind[node.Kind] & sensor) != 0)
+	for _, nodeSensor := range node.sensors() {
+		if nodeSensor == sensor {
+			return true
+		}
+	}
+
+	return false
 }
 
-//
-// Example of data bytes decoding: 156 149 213 0
-//
-//             156 => 1 0 0 1 1 1 0 0
-//             149 => 1 0 0 1 0 1 0 1
-//             213 => 1 1 0 1 0 1 0 1
-//               0 => 0 0 0 0 0 0 0 0
-//
-//             light: 1 0 0 1 1 1 0 0 => 156 * 100 / 255 = 61
-//             moved:               1 => true
-//          humidity: 1 0 0 1 0 1 0   => 74
-//       temperature: 1 1 0 1 0 1 0 1 => 213 / 10 = 21.3
-//                                0 0
-//       low battery:           0     => false
-//        <not used>: 0 0 0 0 0
-//
-func (node *Node) handleJeeNodeThlmData(data []byte) {
-	if len(data) == 4 {
-		var temperature int = ((256 * (int(data[3]) & 3)) + int(data[2]))
-		if temperature > 512 {
-			// negative value
-			temperature = temperature - 1024
-		}
+// reset sensors values
+func (node *Node) resetSensors() {
+	node.Temperature = float64(0)
+	node.Humidity = uint8(0)
+	node.Light = uint8(0)
+	node.Motion = false
+	node.LowBattery = false
+	node.Vcc = 0
+}
 
-		node.Light = uint8((int(data[0]) * 100) / 255)
-		node.Motion = ((data[1] & 1) == 1)
-		node.Humidity = data[1] >> 1
-		node.Temperature = math.Ceil(float64(temperature)) / 10
-		node.LowBattery = (((data[3] >> 2) & 1) == 1)
+// handle incoming node data
+func (node *Node) handleData(data []byte) {
+	if node.sensors() != nil {
+		expectedLength := node.expectedDataLength()
+		if len(data) == expectedLength {
+			sensorsData := node.parseData(data)
+
+			for sensor, value := range sensorsData {
+				node.setSensorRawValue(sensor, value)
+			}
+		} else {
+			log.Error(fmt.Sprintf("Unexpected data length: %v / Expected: %d", data, expectedLength))
+		}
+	} else {
+		log.Error(fmt.Sprintf("Unsupported node kind: %d", node.Kind))
 	}
 }
 
-//
-// Example of data bytes decoding: 184 100 210 0
-//
-//             184 => 1 0 1 1 1 0 0 0
-//             100 => 0 1 1 0 0 1 0 0
-//             210 => 1 1 0 1 0 0 1 0
-//               0 => 0 0 0 0 0 0 0 0
-//
-//             light: 1 0 1 1 1 0 0 0 => 184 * 100 / 255 = 72
-//       low battery:               0 => true
-//          humidity: 0 1 1 0 0 1 0   => 50
-//       temperature: 1 1 0 1 0 0 1 0
-//                                0 0 => 210 / 10 = 21.0
-//        <not used>: 0 0 0 0 0 0
-//
-func (node *Node) handleJeeNodeThlData(data []byte) {
-	if len(data) == 4 {
-		var temperature int = ((256 * (int(data[3]) & 3)) + int(data[2]))
-		if temperature > 512 {
-			// negative value
-			temperature = temperature - 1024
-		}
+// returns expected node data length
+func (node *Node) expectedDataLength() int {
+	bitsNb := 0
 
-		node.Light = uint8((int(data[0]) * 100) / 255)
-		node.LowBattery = ((data[1] & 1) == 1)
-		node.Humidity = data[1] >> 1
-		node.Temperature = math.Ceil(float64(temperature)) / 10
+	for _, sensor := range node.sensors() {
+		bitsNb += BitsNbForSensor[sensor]
+	}
+
+	result := bitsNb / 8
+
+	if (bitsNb % 8) != 0 {
+		result += 1
+	}
+
+	return result
+}
+
+// parse incoming node data
+func (node *Node) parseData(data []byte) map[Sensor]uint64 {
+	result := make(map[Sensor]uint64)
+
+	curByte    := 0
+	curBytePos := 0
+
+	value          := uint64(0)
+	sensorBitsNb   := 0
+	totalBitsShift := 0
+	bytesNeeded    := 0
+
+	for _, sensor := range AllSensors {
+		if node.haveSensor(sensor) {
+			value = 0
+
+			sensorBitsNb = BitsNbForSensor[sensor]
+			if sensorBitsNb > 64 {
+				panic(log.Critical("Wow, sensor %d needs %d bits, really ?", sensor, sensorBitsNb))
+			}
+
+			totalBitsShift = curBytePos + sensorBitsNb
+
+			bytesNeeded = totalBitsShift / 8
+			if (totalBitsShift % 8) != 0 {
+				bytesNeeded += 1
+			}
+
+			for i := 0; i < bytesNeeded; i++ {
+				value += uint64(data[curByte + i]) << uint(8 * i)
+			}
+
+			value = (value >> uint(curBytePos)) & ((1 << uint(sensorBitsNb)) - 1)
+
+			result[sensor] = value
+
+			curByte += (bytesNeeded - 1)
+			curBytePos = totalBitsShift % 8
+		}
+	}
+
+	return result
+}
+
+// set given sensor value
+func (node *Node) setSensorRawValue(sensor Sensor, value uint64) {
+	switch sensor {
+	case TEMP_SENSOR:
+		node.Temperature = node.computeTemperatureValue(value)
+
+	case HUMI_SENSOR:
+		node.Humidity = node.computeHumidityValue(value)
+
+	case LIGHT_SENSOR:
+		node.Light = node.computeLightValue(value)
+
+	case MOTION_SENSOR:
+		node.Motion = node.computeMotionValue(value)
+
+	case LOWBAT_SENSOR:
+		node.LowBattery = node.computeLowbatValue(value)
+
+	case VCC_SENSOR:
+		node.Vcc = node.computeVccValue(value)
+
+	default:
+		panic(log.Critical("Unknown sensor: %d", sensor))
 	}
 }
 
-//
-// Example of data bytes decoding: 92 44 17
-//
-//              92 => 0 1 0 1 1 1 0 0
-//              44 => 0 0 1 0 1 1 0 0
-//              17 => 0 0 0 1 0 0 0 1
-//
-//               vcc: 0 1 0 1 1 1 0 0
-//                            1 1 0 0 => 3164 mv
-//       temperature: 0 0 1 0
-//                        0 1 0 0 0 1 => 274 / 10 = 27.4
-//        <not used>: 0 0
-//
-func (node *Node) handleTinyTNodeData(data []byte) {
-	if len(data) == 3 {
-		var temperature int = (int(data[1]&0xF0) >> 4) + (int(data[2]&0x3F) << 4)
-		if temperature > 512 {
-			// negative value
-			temperature = temperature - 1024
-		}
+// compite temperature value from raw data
+func (node *Node) computeTemperatureValue(value uint64) float64 {
+	result := int64(value)
 
-		node.Vcc = (int(data[1]&0x0F) << 8) + int(data[0])
-		node.Temperature = float64(temperature) / 10
+	if result > 512 {
+		// negative value
+		result -= 1024
 	}
+
+	return math.Ceil(float64(result)) / 10
 }
 
-//
-// Example of data bytes decoding: 92 44 145 12
-//
-//              92 => 0 1 0 1 1 1 0 0
-//              44 => 0 0 1 0 1 1 0 0
-//             145 => 1 0 0 1 0 0 0 1
-//              12 => 0 0 0 0 1 1 0 0
-//
-//               vcc: 0 1 0 1 1 1 0 0
-//                            1 1 0 0 => 3164 mv
-//       temperature: 0 0 1 0
-//                        0 1 0 0 0 1 => 274 / 10 = 27.4
-//          humidity: 1 0
-//                          0 1 1 0 0 => 50
-//        <not used>: 0 0 0
-//
-func (node *Node) handleTinyThNodeData(data []byte) {
-	if len(data) == 4 {
-		var temperature int = (int(data[1]&0xF0) >> 4) + (int(data[2]&0x3F) << 4)
-		if temperature > 512 {
-			// negative value
-			temperature = temperature - 1024
-		}
-
-		node.Vcc = (int(data[1]&0x0F) << 8) + int(data[0])
-		node.Temperature = float64(temperature) / 10
-		node.Humidity = (uint8(data[2]&0xC0) >> 6) + (uint8(data[2]&0x1F) << 2)
-	}
+// compite humidity value from raw data
+func (node *Node) computeHumidityValue(value uint64) uint8 {
+	return uint8(value)
 }
 
-//
-// Example of data bytes decoding: 83 92 79 60
-//
-//              83 => 0 1 0 1 0 0 1 1
-//              92 => 0 1 0 1 1 1 0 0
-//              79 => 0 1 0 0 1 1 1 1
-//              60 => 0 0 1 1 1 1 0 0
-//
-//               vcc: 0 1 0 1 0 0 1 1
-//                            1 1 0 0 => 3155 mv
-//       temperature: 0 1 0 1
-//                        0 0 1 1 1 1 => 243 / 10 = 24.3
-//             light: 0 1
-//                        1 1 1 1 0 0 => 241 * 100 / 255 = 94
-//        <not used>: 0 0
-//
-func (node *Node) handleTinyTlNodeData(data []byte) {
-	if len(data) == 4 {
-		var temperature int = (int(data[1]&0xF0) >> 4) + (int(data[2]&0x3F) << 4)
-		if temperature > 512 {
-			// negative value
-			temperature = temperature - 1024
-		}
-
-		var light int = (int(data[2]&0xC0) >> 6) + (int(data[3]&0x3F) << 2)
-
-		node.Vcc = (int(data[1]&0x0F) << 8) + int(data[0])
-		node.Temperature = float64(temperature) / 10
-		node.Light = uint8((int(light) * 100) / 255)
-	}
+// compite light value from raw data
+func (node *Node) computeLightValue(value uint64) uint8 {
+	return uint8((value * 100) / 255)
 }
 
-// Text to display for debugging
+// compite motion value from raw data
+func (node *Node) computeMotionValue(value uint64) bool {
+	return (value != 0)
+}
+
+// compite low battery value from raw data
+func (node *Node) computeLowbatValue(value uint64) bool {
+	return (value != 0)
+}
+
+// compite vcc value from raw data
+func (node *Node) computeVccValue(value uint64) uint {
+	return uint(value)
+}
+
+// get sensor value
+func (node *Node) sensorValue(sensor Sensor) interface{} {
+	var result interface{}
+
+	switch sensor {
+	case TEMP_SENSOR:
+		result = node.Temperature
+
+	case HUMI_SENSOR:
+		result = node.Humidity
+
+	case LIGHT_SENSOR:
+		result = node.Light
+
+	case MOTION_SENSOR:
+		result = node.Motion
+
+	case LOWBAT_SENSOR:
+		result = node.LowBattery
+
+	case VCC_SENSOR:
+		result = node.Vcc
+
+	default:
+		panic(log.Critical("Unknown sensor: %d", sensor))
+	}
+
+	return result
+}
+
+// text to display for debugging
 func (node *Node) textData() string {
 	result := ""
 
-	if node.haveSensor(TEMP_SENSOR) {
-		result += "Temperature: " + strconv.FormatFloat(float64(node.Temperature), 'f', 1, 64)
-	}
-
-	if node.haveSensor(HUMI_SENSOR) {
+	for _, sensor := range node.sensors() {
 		if result != "" {
 			result += " | "
 		}
 
-		result += "Humidity: " + strconv.Itoa(int(node.Humidity))
-	}
-
-	if node.haveSensor(LIGHT_SENSOR) {
-		if result != "" {
-			result += " | "
-		}
-
-		result += "Light: " + strconv.Itoa(int(node.Light))
-	}
-
-	if node.haveSensor(MOTION_SENSOR) {
-		if result != "" {
-			result += " | "
-		}
-
-		result += "Motion: " + strconv.FormatBool(node.Motion)
-	}
-
-	if node.haveSensor(LOWBAT_SENSOR) {
-		if result != "" {
-			result += " | "
-		}
-
-		result += "LowBattery: " + strconv.FormatBool(node.LowBattery)
-	}
-
-	if node.haveSensor(VCC_SENSOR) {
-		if result != "" {
-			result += " | "
-		}
-
-		result += "Vcc: " + strconv.Itoa(node.Vcc)
+		result += fmt.Sprintf("%s: %v", ColNameForSensor[sensor], node.sensorValue(sensor))
 	}
 
 	return result
 }
 
-// Values to insert in database
-func (node *Node) dbValues() []*DBValue {
-	result := make([]*DBValue, 0)
-
-	if node.haveSensor(TEMP_SENSOR) {
-		result = append(result, &DBValue{name: "temperature", value: node.Temperature})
-	}
-
-	if node.haveSensor(HUMI_SENSOR) {
-		result = append(result, &DBValue{name: "humidity", value: node.Humidity})
-	}
-
-	if node.haveSensor(LIGHT_SENSOR) {
-		result = append(result, &DBValue{name: "light", value: node.Light})
-	}
-
-	if node.haveSensor(MOTION_SENSOR) {
-		result = append(result, &DBValue{name: "motion", value: node.Motion})
-	}
-
-	if node.haveSensor(LOWBAT_SENSOR) {
-		result = append(result, &DBValue{name: "lowbat", value: node.LowBattery})
-	}
-
-	if node.haveSensor(VCC_SENSOR) {
-		result = append(result, &DBValue{name: "vcc", value: node.Vcc})
-	}
-
-	return result
-}
-
-// Query parameters part to send to domoticz
+// query parameters part to send to domoticz
 func (node *Node) domoticzParams(hardwareId string) string {
 	result := ""
 
