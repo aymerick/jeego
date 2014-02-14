@@ -77,6 +77,10 @@ func loadDatabase(databasePath string) (*Database, error) {
 	return &db, nil
 }
 
+func (db *Database) close() {
+	db.driver.Close()
+}
+
 // Create tables
 func (db *Database) createTables() {
 	schemas := [2]string{NODES_SCHEMA, LOGS_SCHEMA}
@@ -193,6 +197,7 @@ func (db *Database) insertNode(id int, kind int) *Node {
 
 	// persist in database
 	query, args := insertNodeQuery(id, kind)
+
 	_, err := db.driver.Exec(query, args...)
 	if err != nil {
 		panic(log.Critical(err))
@@ -239,6 +244,7 @@ func (db *Database) updateNode(node *Node) {
 
 		// persist in database
 		query, args := updateNodeQuery(node)
+
 		_, err := db.driver.Exec(query, args...)
 		if err != nil {
 			panic(log.Critical(err))
@@ -279,6 +285,7 @@ func (db *Database) insertLog(node *Node) {
 	if len(node.sensors()) > 0 {
 		// persist in database
 		query, args := insertLogQuery(node)
+
 		_, err := db.driver.Exec(query, args...)
 		if err != nil {
 			panic(log.Critical(err))
@@ -309,13 +316,16 @@ func (db *Database) startLogsTicker(period time.Duration, history time.Duration)
 	}()
 }
 
+func trimLogsQuery(history time.Duration) (string, []interface{}) {
+	return "DELETE FROM logs WHERE (at < ?)", []interface{}{ time.Now().UTC().Add(-history).Unix() }
+}
+
 // Delete old logs
 func (db *Database) trimLogs(history time.Duration) {
-	trimTo := time.Now().UTC().Add(-history).Unix()
+	// persist in database
+	query, args := trimLogsQuery(history)
 
-	query := "DELETE FROM logs WHERE (at < ?)"
-
-	_, err := db.driver.Exec(query, trimTo)
+	_, err := db.driver.Exec(query, args...)
 	if err != nil {
 		panic(log.Critical(err))
 	}
