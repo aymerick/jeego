@@ -41,9 +41,16 @@ var ColNameForSensor map[Sensor]string
 
 // Database
 type Database struct {
-	driver     *sql.DB
-	nodes      []*Node
-	logsTicker *time.Ticker
+	driver      *sql.DB
+	queryWriter chan *DatabaseQuery
+	nodes       []*Node
+	logsTicker  *time.Ticker
+}
+
+// Database Query
+type DatabaseQuery struct {
+	query string
+	args  []interface{}
 }
 
 // Init
@@ -74,7 +81,37 @@ func loadDatabase(databasePath string) (*Database, error) {
 	// load nodes
 	db.loadNodes()
 
+	// run query writer
+	db.runQueryWriter()
+
 	return &db, nil
+}
+
+// Start RF12demo handler
+func (db *Database) runQueryWriter() {
+	inputChan := make(chan *DatabaseQuery)
+
+	go func() {
+		var dbQuery *DatabaseQuery
+
+		// loop forever
+		for {
+			dbQuery = <-inputChan
+
+			// log.Debug("Exec DB write query: %s", dbQuery.query)
+
+			_, err := db.driver.Exec(dbQuery.query, dbQuery.args...)
+			if err != nil {
+				panic(log.Critical(err))
+			}
+		}
+	}()
+
+	db.queryWriter = inputChan
+}
+
+func (db *Database) writeQuery(dbQuery *DatabaseQuery) {
+	db.queryWriter <- dbQuery
 }
 
 func (db *Database) close() {
@@ -183,10 +220,6 @@ func (db *Database) nodeForId(id int) *Node {
 	return nil
 }
 
-func insertNodeQuery(id int, kind int) (string, []interface{}) {
-	return "INSERT INTO nodes(id, kind) VALUES(?, ?)", []interface{}{ id, kind }
-}
-
 // Insert a new node
 func (db *Database) insertNode(id int, kind int) *Node {
 	// init node
@@ -196,17 +229,15 @@ func (db *Database) insertNode(id int, kind int) *Node {
 	db.nodes = append(db.nodes, node)
 
 	// persist in database
-	query, args := insertNodeQuery(id, kind)
-
-	_, err := db.driver.Exec(query, args...)
-	if err != nil {
-		panic(log.Critical(err))
-	}
+	db.writeQuery(&DatabaseQuery{
+		query: "INSERT INTO nodes(id, kind) VALUES(?, ?)",
+		args:  []interface{}{ id, kind },
+	})
 
 	return node
 }
 
-func updateNodeQuery(node *Node) (string, []interface{}) {
+func updateNodeQuery(node *Node) *DatabaseQuery {
 	args := make([]interface{}, 0)
 
 	query := "UPDATE nodes SET updated_at = ?"
@@ -234,7 +265,7 @@ func updateNodeQuery(node *Node) (string, []interface{}) {
 	query += " WHERE id = ?"
 	args = append(args, node.Id)
 
-	return query, args
+	return &DatabaseQuery{ query: query, args: args }
 }
 
 // Update node
@@ -243,16 +274,11 @@ func (db *Database) updateNode(node *Node) {
 		node.UpdatedAt = time.Now().UTC()
 
 		// persist in database
-		query, args := updateNodeQuery(node)
-
-		_, err := db.driver.Exec(query, args...)
-		if err != nil {
-			panic(log.Critical(err))
-		}
+		db.writeQuery(updateNodeQuery(node))
 	}
 }
 
-func insertLogQuery(node *Node) (string, []interface{}) {
+func insertLogQuery(node *Node) *DatabaseQuery {
 	args := make([]interface{}, 0)
 
 	query := "INSERT INTO logs(node_id, at"
@@ -277,19 +303,14 @@ func insertLogQuery(node *Node) (string, []interface{}) {
 	}
 	query += ")"
 
-	return query, args
+	return &DatabaseQuery{ query: query, args: args }
 }
 
 // Insert log for given node
 func (db *Database) insertLog(node *Node) {
 	if len(node.sensors()) > 0 {
 		// persist in database
-		query, args := insertLogQuery(node)
-
-		_, err := db.driver.Exec(query, args...)
-		if err != nil {
-			panic(log.Critical(err))
-		}
+		db.writeQuery(insertLogQuery(node))
 	}
 }
 
@@ -316,17 +337,11 @@ func (db *Database) startLogsTicker(period time.Duration, history time.Duration)
 	}()
 }
 
-func trimLogsQuery(history time.Duration) (string, []interface{}) {
-	return "DELETE FROM logs WHERE (at < ?)", []interface{}{ time.Now().UTC().Add(-history).Unix() }
-}
-
 // Delete old logs
 func (db *Database) trimLogs(history time.Duration) {
 	// persist in database
-	query, args := trimLogsQuery(history)
-
-	_, err := db.driver.Exec(query, args...)
-	if err != nil {
-		panic(log.Critical(err))
-	}
+	db.writeQuery(&DatabaseQuery{
+		query: "DELETE FROM logs WHERE (at < ?)",
+		args:  []interface{}{ time.Now().UTC().Add(-history).Unix() },
+	})
 }
