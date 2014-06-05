@@ -1,11 +1,12 @@
 package main
 
 import (
-	log "code.google.com/p/log4go"
 	"database/sql"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
 	"time"
+
+	log "code.google.com/p/log4go"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const NODES_SCHEMA = `
@@ -223,7 +224,7 @@ func (db *Database) nodeForId(id int) *Node {
 // Insert a new node
 func (db *Database) insertNode(id int, kind int) *Node {
 	// init node
-	node := &Node{Id: id, Kind: kind}
+	node := &Node{Id: id, Kind: kind, Name: fmt.Sprintf("Node %d", id)}
 
 	// add node to list
 	db.nodes = append(db.nodes, node)
@@ -231,7 +232,7 @@ func (db *Database) insertNode(id int, kind int) *Node {
 	// persist in database
 	db.writeQuery(&DatabaseQuery{
 		query: "INSERT INTO nodes(id, kind) VALUES(?, ?)",
-		args:  []interface{}{ id, kind },
+		args:  []interface{}{id, kind},
 	})
 
 	return node
@@ -265,7 +266,7 @@ func updateNodeQuery(node *Node) *DatabaseQuery {
 	query += " WHERE id = ?"
 	args = append(args, node.Id)
 
-	return &DatabaseQuery{ query: query, args: args }
+	return &DatabaseQuery{query: query, args: args}
 }
 
 // Update node
@@ -303,7 +304,7 @@ func insertLogQuery(node *Node) *DatabaseQuery {
 	}
 	query += ")"
 
-	return &DatabaseQuery{ query: query, args: args }
+	return &DatabaseQuery{query: query, args: args}
 }
 
 // Insert log for given node
@@ -342,6 +343,6 @@ func (db *Database) trimLogs(history time.Duration) {
 	// persist in database
 	db.writeQuery(&DatabaseQuery{
 		query: "DELETE FROM logs WHERE (at < ?)",
-		args:  []interface{}{ time.Now().UTC().Add(-history).Unix() },
+		args:  []interface{}{time.Now().UTC().Add(-history).Unix()},
 	})
 }
