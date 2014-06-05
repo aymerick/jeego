@@ -1,7 +1,6 @@
 package main
 
 import (
-	log "code.google.com/p/log4go"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -42,14 +41,12 @@ func pushToDomoticz(config *Config, node *Node) {
 
 			resp, err := http.Get(url)
 			if err != nil {
-				// @todo node.logWarn(...)
-				log.Warn("[%s] Failed to push value to domoticz", node.Name)
+				node.logWarn("Failed to push value to domoticz")
 			} else {
 				respText, err := ioutil.ReadAll(resp.Body)
 				resp.Body.Close()
 				if err != nil {
-					// @todo node.logWarn(...)
-					log.Warn("[%s] Failed to get domoticz response", node.Name)
+					node.logWarn("Failed to get domoticz response")
 				} else {
 					node.logDebug(fmt.Sprintf("Domoticz response: %s", respText))
 				}

@@ -1,12 +1,13 @@
 package main
 
 import (
-	log "code.google.com/p/log4go"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	log "code.google.com/p/log4go"
 )
 
 // Rf12demo Data Log
@@ -22,7 +23,7 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 	inputChan := make(chan string, 1)
 
 	go func() {
-		var line       string
+		var line string
 		var loggerChan chan string
 
 		if jeego.config.Rf12demoLogFile != "" {
@@ -70,6 +71,8 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 
 				// push to domoticz
 				go pushToDomoticz(jeego.config, node)
+
+				// @todo insert in InfluxDB
 			}
 		}
 	}()
@@ -94,11 +97,11 @@ func runRf12demoLogger(jeego *Jeego) chan string {
 		rawLogger := log.NewDefaultLogger(log.DEBUG)
 		rawLogger.AddFilter("file", log.INFO, flw)
 
-	    log.Info("Logging RF12demo data to file: %s", jeego.config.Rf12demoLogFile)
+		log.Info("Logging RF12demo data to file: %s", jeego.config.Rf12demoLogFile)
 
 		// loop forever
 		for {
-			line = <- inputChan
+			line = <-inputChan
 
 			rawLogger.Info(line)
 		}
@@ -145,7 +148,7 @@ func parseLine(line string) (dataLog *Rf12demoDataLog, err error) {
 			err = errors.New("Received payload with reserved field set to 1")
 			log.Error(err)
 		} else {
-			dataLog = &Rf12demoDataLog{ at: time.Now().UTC() }
+			dataLog = &Rf12demoDataLog{at: time.Now().UTC()}
 
 			// parse node id
 			dataLog.nodeId = int(byteFromString(dataStrArray[1]) & 0x1f)

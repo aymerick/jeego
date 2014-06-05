@@ -1,10 +1,11 @@
 package main
 
 import (
-	log "code.google.com/p/log4go"
 	"fmt"
 	"math"
 	"time"
+
+	log "code.google.com/p/log4go"
 )
 
 // node kinds
@@ -18,12 +19,12 @@ const (
 
 // sensors kinds
 const (
-	TEMP_SENSOR = iota // Temperature
-	HUMI_SENSOR        // Humidity
-	LIGHT_SENSOR       // Light
-	MOTION_SENSOR      // Motion
-	LOWBAT_SENSOR      // Low Battery
-	VCC_SENSOR         // Supply voltage
+	TEMP_SENSOR   = iota // Temperature
+	HUMI_SENSOR          // Humidity
+	LIGHT_SENSOR         // Light
+	MOTION_SENSOR        // Motion
+	LOWBAT_SENSOR        // Low Battery
+	VCC_SENSOR           // Supply voltage
 )
 
 type Sensor uint
@@ -41,31 +42,31 @@ type Node struct {
 	DomoticzIdx string    `json:"domoticz_idx,omitempty"`
 
 	// sensors
-	Temperature float64   `json:"temperature,omitempty"`
-	Humidity    uint8     `json:"humidity,omitempty"`
-	Light       uint8     `json:"light,omitempty"`
-	Motion      bool      `json:"motion,omitempty"`
-	LowBattery  bool      `json:"low_battery,omitempty"`
-	Vcc         uint      `json:"vcc,omitempty"`
+	Temperature float64 `json:"temperature,omitempty"`
+	Humidity    uint8   `json:"humidity,omitempty"`
+	Light       uint8   `json:"light,omitempty"`
+	Motion      bool    `json:"motion,omitempty"`
+	LowBattery  bool    `json:"low_battery,omitempty"`
+	Vcc         uint    `json:"vcc,omitempty"`
 }
 
 func init() {
-	AllSensors = []Sensor{ TEMP_SENSOR, HUMI_SENSOR, LIGHT_SENSOR, MOTION_SENSOR, LOWBAT_SENSOR, VCC_SENSOR }
+	AllSensors = []Sensor{TEMP_SENSOR, HUMI_SENSOR, LIGHT_SENSOR, MOTION_SENSOR, LOWBAT_SENSOR, VCC_SENSOR}
 
 	SensorsForNodeKind = map[int][]Sensor{
-		JEENODE_THLM_NODE: { TEMP_SENSOR, HUMI_SENSOR, LIGHT_SENSOR, MOTION_SENSOR, LOWBAT_SENSOR },
-		JEENODE_THL_NODE:  { TEMP_SENSOR, HUMI_SENSOR, LIGHT_SENSOR, LOWBAT_SENSOR },
-		TINYTX_T_NODE:     { TEMP_SENSOR, VCC_SENSOR },
-		TINYTX_TH_NODE:    { TEMP_SENSOR, HUMI_SENSOR, VCC_SENSOR },
-		TINYTX_TL_NODE:    { TEMP_SENSOR, LIGHT_SENSOR, VCC_SENSOR },
+		JEENODE_THLM_NODE: {TEMP_SENSOR, HUMI_SENSOR, LIGHT_SENSOR, MOTION_SENSOR, LOWBAT_SENSOR},
+		JEENODE_THL_NODE:  {TEMP_SENSOR, HUMI_SENSOR, LIGHT_SENSOR, LOWBAT_SENSOR},
+		TINYTX_T_NODE:     {TEMP_SENSOR, VCC_SENSOR},
+		TINYTX_TH_NODE:    {TEMP_SENSOR, HUMI_SENSOR, VCC_SENSOR},
+		TINYTX_TL_NODE:    {TEMP_SENSOR, LIGHT_SENSOR, VCC_SENSOR},
 	}
 
 	BitsNbForSensor = map[Sensor]int{
 		TEMP_SENSOR:   10, // [10 bits] Temperature: -512..+512 (tenths)
-		HUMI_SENSOR:    7, //  [7 bits] Humidity: 0..100
-		LIGHT_SENSOR:   8, //  [8 bits] Light: 0..255
-		MOTION_SENSOR:  1, //   [1 bit] Motion: 0..1
-		LOWBAT_SENSOR:  1, //   [1 bit] Low Battery: 0..1
+		HUMI_SENSOR:   7,  //  [7 bits] Humidity: 0..100
+		LIGHT_SENSOR:  8,  //  [8 bits] Light: 0..255
+		MOTION_SENSOR: 1,  //   [1 bit] Motion: 0..1
+		LOWBAT_SENSOR: 1,  //   [1 bit] Low Battery: 0..1
 		VCC_SENSOR:    12, // [12 bits] Supply voltage: 0..4095 mV
 	}
 }
@@ -78,6 +79,16 @@ func (node *Node) logDebug(msg string) {
 	}
 
 	log.Debug("[node %d][%s] %s", node.Id, nodeName, msg)
+}
+
+// log formatted warn message
+func (node *Node) logWarn(msg string) {
+	nodeName := node.Name
+	if nodeName == "" {
+		nodeName = "Unnamed"
+	}
+
+	log.Warn("[node %d][%s] %s", node.Id, nodeName, msg)
 }
 
 // return all sensors
@@ -158,13 +169,13 @@ func (node *Node) expectedDataLength() int {
 func (node *Node) parseData(data []byte) map[Sensor]uint64 {
 	result := make(map[Sensor]uint64)
 
-	curByte    := 0
+	curByte := 0
 	curBytePos := 0
 
-	value          := uint64(0)
-	sensorBitsNb   := 0
+	value := uint64(0)
+	sensorBitsNb := 0
 	totalBitsShift := 0
-	bytesNeeded    := 0
+	bytesNeeded := 0
 
 	for _, sensor := range AllSensors {
 		if node.haveSensor(sensor) {
@@ -183,7 +194,7 @@ func (node *Node) parseData(data []byte) map[Sensor]uint64 {
 			}
 
 			for i := 0; i < bytesNeeded; i++ {
-				value += uint64(data[curByte + i]) << uint(8 * i)
+				value += uint64(data[curByte+i]) << uint(8*i)
 			}
 
 			value = (value >> uint(curBytePos)) & ((1 << uint(sensorBitsNb)) - 1)
