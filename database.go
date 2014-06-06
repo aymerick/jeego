@@ -223,16 +223,18 @@ func (db *Database) nodeForId(id int) *Node {
 
 // Insert a new node
 func (db *Database) insertNode(id int, kind int) *Node {
+	name := fmt.Sprintf("Node %d", id)
+
 	// init node
-	node := &Node{Id: id, Kind: kind, Name: fmt.Sprintf("Node %d", id)}
+	node := &Node{Id: id, Kind: kind, Name: name}
 
 	// add node to list
 	db.nodes = append(db.nodes, node)
 
 	// persist in database
 	db.writeQuery(&DatabaseQuery{
-		query: "INSERT INTO nodes(id, kind) VALUES(?, ?)",
-		args:  []interface{}{id, kind},
+		query: "INSERT INTO nodes(id, kind, name) VALUES(?, ?, ?)",
+		args:  []interface{}{id, kind, name},
 	})
 
 	return node
@@ -241,8 +243,9 @@ func (db *Database) insertNode(id int, kind int) *Node {
 func updateNodeQuery(node *Node) *DatabaseQuery {
 	args := make([]interface{}, 0)
 
-	query := "UPDATE nodes SET updated_at = ?"
+	query := "UPDATE nodes SET updated_at = ?, name = ?"
 	args = append(args, node.UpdatedAt.Unix())
+	args = append(args, node.Name)
 
 	// set sensors values
 	for _, sensor := range node.sensors() {
