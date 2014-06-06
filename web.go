@@ -61,10 +61,12 @@ func wrapHandlerNode(jeego *Jeego, meth string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		addAccessControlHeaders(w, meth)
 
+		// parse node id
 		nodeId, err := strconv.Atoi(req.URL.Query().Get(":id"))
 		if err != nil {
 			respondsWithError(w, http.StatusBadRequest, err)
 		} else {
+			// get node
 			node := jeego.database.nodeForId(nodeId)
 			if node != nil {
 				respondsWithJSON(w, map[string]interface{}{"node": node})
@@ -80,18 +82,20 @@ func wrapHandlerUpdateNode(jeego *Jeego, meth string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		addAccessControlHeaders(w, meth)
 
-		// Parse the incoming kitten from the request body
+		// parse JSON
 		var nodeJSON NodeJSON
 		err := json.NewDecoder(req.Body).Decode(&nodeJSON)
 		if err != nil {
 			log.Error(fmt.Sprintf("Failed to parse JSON: %v", err))
 			respondsWithError(w, http.StatusBadRequest, err)
 		} else {
+			// parse node id
 			nodeId, err := strconv.Atoi(req.URL.Query().Get(":id"))
 			if err != nil {
 				log.Error("Failed to get node id")
 				respondsWithError(w, http.StatusBadRequest, err)
 			} else {
+				// get node
 				node := jeego.database.nodeForId(nodeId)
 				if node == nil {
 					respondsWithError(w, http.StatusNotFound, fmt.Errorf("Node %d not found", nodeId))
