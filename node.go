@@ -38,6 +38,7 @@ type Node struct {
 	Id          int       `json:"id"`
 	Kind        int       `json:"kind"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	LastSeenAt  time.Time `json:"last_seen_at"`
 	Name        string    `json:"name"`
 	DomoticzIdx string    `json:"domoticz_idx,omitempty"`
 

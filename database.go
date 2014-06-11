@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS nodes (
     id INTEGER NOT NULL PRIMARY KEY,
     kind INTEGER NOT NULL,
     updated_at INTEGER,
+    last_seen_at INTEGER,
     name TEXT,
     domoticz_idx TEXT,
     temperature REAL,
@@ -99,7 +100,7 @@ func (db *Database) runQueryWriter() {
 		for {
 			dbQuery = <-inputChan
 
-			// log.Debug("Exec DB write query: %s", dbQuery.query)
+			// log.Debug("Exec DB write query: %s / %v", dbQuery.query, dbQuery.args)
 
 			_, err := db.driver.Exec(dbQuery.query, dbQuery.args...)
 			if err != nil {
@@ -159,16 +160,18 @@ func (db *Database) loadNodes() {
 			motion       sql.NullBool
 			lowbat       sql.NullBool
 			vcc          sql.NullInt64
+			last_seen_at int64
 		)
 
 		// @todo Use github.com/russross/meddler ?
-		rows.Scan(&id, &kind, &updated_at, &name, &domoticz_idx, &temperature, &humidity, &light, &motion, &lowbat, &vcc)
+		rows.Scan(&id, &kind, &updated_at, &name, &domoticz_idx, &temperature, &humidity, &light, &motion, &lowbat, &vcc, &last_seen_at)
 
 		// init node
 		node = &Node{
-			Id:        id,
-			Kind:      kind,
-			UpdatedAt: time.Unix(updated_at, 0),
+			Id:         id,
+			Kind:       kind,
+			UpdatedAt:  time.Unix(updated_at, 0),
+			LastSeenAt: time.Unix(last_seen_at, 0),
 		}
 
 		if name.Valid {
@@ -243,8 +246,9 @@ func (db *Database) insertNode(id int, kind int) *Node {
 func updateNodeQuery(node *Node) *DatabaseQuery {
 	args := make([]interface{}, 0)
 
-	query := "UPDATE nodes SET updated_at = ?, name = ?"
+	query := "UPDATE nodes SET updated_at = ?, last_seen_at = ?, name = ?"
 	args = append(args, node.UpdatedAt.Unix())
+	args = append(args, node.LastSeenAt.Unix())
 	args = append(args, node.Name)
 
 	// set sensors values

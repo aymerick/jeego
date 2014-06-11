@@ -60,6 +60,8 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 					node.resetSensors()
 				}
 
+				node.LastSeenAt = time.Now().UTC()
+
 				// handle data
 				node.handleData(dataLog.data)
 

@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/stretchr/testify/assert"
 	"os"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const TEST_DB_PATH = "./jeego-test.db"
@@ -20,14 +21,6 @@ func destroyDatabase(db *Database) {
 		db.close()
 	}
 	os.Remove(TEST_DB_PATH)
-}
-
-
-func Test_InsertNodeQuery(t *testing.T) {
-	query, args := insertNodeQuery(2, JEENODE_THLM_NODE)
-
-	assert.Equal(t, query, "INSERT INTO nodes(id, kind) VALUES(?, ?)")
-	assert.True(t, reflect.DeepEqual(args, []interface{}{ 2, JEENODE_THLM_NODE }))
 }
 
 func Test_InsertNode(t *testing.T) {
@@ -47,23 +40,25 @@ func Test_InsertNode(t *testing.T) {
 
 func Test_UpdateNodeQuery(t *testing.T) {
 	node := &Node{
-		Id: 2,
-		Kind: JEENODE_THLM_NODE,
-		UpdatedAt: time.Now().UTC(),
+		Id:          2,
+		Kind:        JEENODE_THLM_NODE,
+		UpdatedAt:   time.Now().UTC(),
+		LastSeenAt:  time.Now().UTC(),
+		Name:        "test",
 		Temperature: float64(21.3),
-		Humidity: uint8(74),
-		Light: uint8(61),
-		Motion: true,
-		LowBattery: false,
+		Humidity:    uint8(74),
+		Light:       uint8(61),
+		Motion:      true,
+		LowBattery:  false,
 	}
 
-	expected_query := "UPDATE nodes SET updated_at = ?, temperature = ?, humidity = ?, light = ?, motion = ?, lowbat = ?, vcc = NULL WHERE id = ?"
-	expected_args  := []interface{}{ node.UpdatedAt.Unix(), float64(21.3), uint8(74), uint8(61), true, false, node.Id }
+	expected_query := "UPDATE nodes SET updated_at = ?, last_seen_at = ?, name = ?, temperature = ?, humidity = ?, light = ?, motion = ?, lowbat = ?, vcc = NULL WHERE id = ?"
+	expected_args := []interface{}{node.UpdatedAt.Unix(), node.LastSeenAt.Unix(), node.Name, float64(21.3), uint8(74), uint8(61), true, false, node.Id}
 
-	query, args := updateNodeQuery(node)
+	dbQuery := updateNodeQuery(node)
 
-	assert.Equal(t, query, expected_query)
-	assert.True(t, reflect.DeepEqual(args, expected_args))
+	assert.Equal(t, dbQuery.query, expected_query)
+	assert.True(t, reflect.DeepEqual(dbQuery.args, expected_args))
 }
 
 func Test_UpdateNode(t *testing.T) {
@@ -96,35 +91,36 @@ func Test_UpdateNode(t *testing.T) {
 
 	node2 = db2.nodeForId(2)
 	assert.Equal(t, node2.Temperature, float64(21.3))
-	assert.Equal(t, node2.Humidity,    uint8(74))
-	assert.Equal(t, node2.Light,       uint8(61))
-	assert.Equal(t, node2.Motion,      true)
-	assert.Equal(t, node2.LowBattery,  false)
+	assert.Equal(t, node2.Humidity, uint8(74))
+	assert.Equal(t, node2.Light, uint8(61))
+	assert.Equal(t, node2.Motion, true)
+	assert.Equal(t, node2.LowBattery, false)
 
 	node3 = db2.nodeForId(3)
 	assert.Equal(t, node3.Temperature, float64(19.4))
-	assert.Equal(t, node3.Vcc,         uint(3096))
+	assert.Equal(t, node3.Vcc, uint(3096))
 }
 
 func Test_InsertLogQuery(t *testing.T) {
 	node := &Node{
-		Id: 2,
-		Kind: JEENODE_THLM_NODE,
-		UpdatedAt: time.Now().UTC(),
+		Id:          2,
+		Kind:        JEENODE_THLM_NODE,
+		UpdatedAt:   time.Now().UTC(),
+		LastSeenAt:  time.Now().UTC(),
 		Temperature: float64(21.3),
-		Humidity: uint8(74),
-		Light: uint8(61),
-		Motion: true,
-		LowBattery: false,
+		Humidity:    uint8(74),
+		Light:       uint8(61),
+		Motion:      true,
+		LowBattery:  false,
 	}
 
 	expected_query := "INSERT INTO logs(node_id, at, temperature, humidity, light, motion, lowbat) VALUES(?, ?, ?, ?, ?, ?, ?)"
-	expected_args  := []interface{}{ node.Id, node.UpdatedAt.Unix(), float64(21.3), uint8(74), uint8(61), true, false }
+	expected_args := []interface{}{node.Id, node.LastSeenAt.Unix(), float64(21.3), uint8(74), uint8(61), true, false}
 
-	query, args := insertLogQuery(node)
+	dbQuery := insertLogQuery(node)
 
-	assert.Equal(t, query, expected_query)
-	assert.True(t, reflect.DeepEqual(args, expected_args))
+	assert.Equal(t, dbQuery.query, expected_query)
+	assert.True(t, reflect.DeepEqual(dbQuery.args, expected_args))
 }
 
 func Test_InsertLogs(t *testing.T) {
@@ -148,16 +144,4 @@ func Test_InsertLogs(t *testing.T) {
 
 	db.insertLogs()
 	// @todo Check that logs are correctly inserted in database
-}
-
-func Test_TrimLogsQuery(t *testing.T) {
-	history := time.Minute
-
-	expected_query := "DELETE FROM logs WHERE (at < ?)"
-	expected_args  := []interface{}{ time.Now().UTC().Add(-history).Unix() }
-
-	query, args := trimLogsQuery(history)
-
-	assert.Equal(t, query, expected_query)
-	assert.True(t, reflect.DeepEqual(args, expected_args))
 }
