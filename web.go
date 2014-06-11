@@ -112,6 +112,30 @@ func wrapHandlerUpdateNode(jeego *Jeego, meth string) http.HandlerFunc {
 	}
 }
 
+// GET /api/nodes/:id/temperatures
+func wrapHandlerNodeTemperatures(jeego *Jeego, meth string) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		addAccessControlHeaders(w, meth)
+
+		// parse node id
+		nodeId, err := strconv.Atoi(req.URL.Query().Get(":id"))
+		if err != nil {
+			respondsWithError(w, http.StatusBadRequest, err)
+		} else {
+			// get node
+			node := jeego.database.nodeForId(nodeId)
+			if node != nil {
+				// get logs
+				serie := node.temperaturesSerie(jeego.database.logs(node))
+
+				respondsWithJSON(w, map[string]interface{}{"temperatures": serie})
+			} else {
+				respondsWithError(w, http.StatusNotFound, fmt.Errorf("Node %d not found", nodeId))
+			}
+		}
+	}
+}
+
 func runWebServer(jeego *Jeego) {
 	go func() {
 		log.Info("Starting web server on port %d", jeego.config.WebServerPort)
@@ -128,6 +152,10 @@ func runWebServer(jeego *Jeego) {
 		mux.Options("/api/nodes/:id", wrapHandlerOptions(jeego, nodeMeth))
 		mux.Get("/api/nodes/:id", wrapHandlerNode(jeego, nodeMeth))
 		mux.Put("/api/nodes/:id", wrapHandlerUpdateNode(jeego, nodeMeth))
+
+		nodeTempMeth := "OPTIONS, GET"
+		mux.Options("/api/nodes/:id/temperatures", wrapHandlerOptions(jeego, nodeTempMeth))
+		mux.Get("/api/nodes/:id/temperatures", wrapHandlerNodeTemperatures(jeego, nodeTempMeth))
 
 		http.Handle("/", mux)
 		err := http.ListenAndServe(addr, nil)

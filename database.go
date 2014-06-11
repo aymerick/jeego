@@ -55,6 +55,18 @@ type DatabaseQuery struct {
 	args  []interface{}
 }
 
+// Log
+type Log struct {
+	NodeId      int       `json:"node_id"`
+	At          time.Time `json:"at"`
+	Temperature float64   `json:"temperature,omitempty"`
+	Humidity    uint8     `json:"humidity,omitempty"`
+	Light       uint8     `json:"light,omitempty"`
+	Motion      bool      `json:"motion,omitempty"`
+	LowBattery  bool      `json:"low_battery,omitempty"`
+	Vcc         uint      `json:"vcc,omitempty"`
+}
+
 // Init
 func init() {
 	ColNameForSensor = map[Sensor]string{
@@ -352,4 +364,70 @@ func (db *Database) trimLogs(history time.Duration) {
 		query: "DELETE FROM logs WHERE (at < ?)",
 		args:  []interface{}{time.Now().UTC().Add(-history).Unix()},
 	})
+}
+
+// Fetch logs for given node
+func (db *Database) logs(node *Node) []*Log {
+	result := make([]*Log, 0)
+
+	// fetch nodes from db
+	rows, err := db.driver.Query("SELECT * FROM logs WHERE node_id=?", node.Id)
+	if err != nil {
+		panic(log.Critical(err))
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var log *Log
+
+		// fetch log fields
+		var (
+			node_id     int
+			at          int64
+			temperature sql.NullFloat64
+			humidity    sql.NullInt64
+			light       sql.NullInt64
+			motion      sql.NullBool
+			lowbat      sql.NullBool
+			vcc         sql.NullInt64
+		)
+
+		// @todo Use github.com/russross/meddler ?
+		rows.Scan(&node_id, &at, &temperature, &humidity, &light, &motion, &lowbat, &vcc)
+
+		// init log
+		log = &Log{
+			NodeId: node_id,
+			At:     time.Unix(at, 0),
+		}
+
+		if temperature.Valid {
+			log.Temperature = float64(temperature.Float64)
+		}
+
+		if humidity.Valid {
+			log.Humidity = uint8(humidity.Int64)
+		}
+
+		if light.Valid {
+			log.Light = uint8(light.Int64)
+		}
+
+		if motion.Valid {
+			log.Motion = motion.Bool
+		}
+
+		if lowbat.Valid {
+			log.LowBattery = lowbat.Bool
+		}
+
+		if vcc.Valid {
+			log.Vcc = uint(vcc.Int64)
+		}
+
+		// add log to list
+		result = append(result, log)
+	}
+
+	return result
 }
