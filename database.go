@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS nodes (
 `
 
 const LOGS_SCHEMA = `
-CREATE TABLE IF NOT EXISTS logs (
+CREATE TABLE IF NOT EXISTS node_logs (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 	node_id INTEGER NOT NULL,
 	at INTEGER NOT NULL,
 	temperature REAL,
@@ -53,18 +54,6 @@ type Database struct {
 type DatabaseQuery struct {
 	query string
 	args  []interface{}
-}
-
-// Log
-type Log struct {
-	NodeId      int       `json:"node_id"`
-	At          time.Time `json:"at"`
-	Temperature float64   `json:"temperature,omitempty"`
-	Humidity    uint8     `json:"humidity,omitempty"`
-	Light       uint8     `json:"light,omitempty"`
-	Motion      bool      `json:"motion,omitempty"`
-	LowBattery  bool      `json:"low_battery,omitempty"`
-	Vcc         uint      `json:"vcc,omitempty"`
 }
 
 // Init
@@ -164,6 +153,7 @@ func (db *Database) loadNodes() {
 			id           int
 			kind         int
 			updated_at   int64
+			last_seen_at int64
 			name         sql.NullString
 			domoticz_idx sql.NullString
 			temperature  sql.NullFloat64
@@ -172,11 +162,10 @@ func (db *Database) loadNodes() {
 			motion       sql.NullBool
 			lowbat       sql.NullBool
 			vcc          sql.NullInt64
-			last_seen_at int64
 		)
 
 		// @todo Use github.com/russross/meddler ?
-		rows.Scan(&id, &kind, &updated_at, &name, &domoticz_idx, &temperature, &humidity, &light, &motion, &lowbat, &vcc, &last_seen_at)
+		rows.Scan(&id, &kind, &updated_at, &last_seen_at, &name, &domoticz_idx, &temperature, &humidity, &light, &motion, &lowbat, &vcc)
 
 		// init node
 		node = &Node{
@@ -298,10 +287,10 @@ func (db *Database) updateNode(node *Node) {
 	}
 }
 
-func insertLogQuery(node *Node) *DatabaseQuery {
+func insertNodeLogQuery(node *Node) *DatabaseQuery {
 	args := make([]interface{}, 0)
 
-	query := "INSERT INTO logs(node_id, at"
+	query := "INSERT INTO node_logs(node_id, at"
 	args = append(args, node.Id)
 	args = append(args, time.Now().UTC().Unix())
 
@@ -327,61 +316,62 @@ func insertLogQuery(node *Node) *DatabaseQuery {
 }
 
 // Insert log for given node
-func (db *Database) insertLog(node *Node) {
+func (db *Database) insertNodeLog(node *Node) {
 	if len(node.sensors()) > 0 {
 		// persist in database
-		db.writeQuery(insertLogQuery(node))
+		db.writeQuery(insertNodeLogQuery(node))
 	}
 }
 
 // Insert logs for all nodes
-func (db *Database) insertLogs() {
+func (db *Database) insertNodeLogs() {
 	for _, node := range db.nodes {
-		db.insertLog(node)
+		db.insertNodeLog(node)
 	}
 }
 
 // Add a log entry every 5 minutes
-func (db *Database) startLogsTicker(period time.Duration, history time.Duration) {
+func (db *Database) startNodeLogsTicker(period time.Duration, history time.Duration) {
 	db.logsTicker = time.NewTicker(period)
 
 	// do it right now
-	db.insertLogs()
+	db.insertNodeLogs()
 
 	go func() {
 		for _ = range db.logsTicker.C {
-			db.insertLogs()
+			db.insertNodeLogs()
 
-			db.trimLogs(history)
+			db.trimNodeLogs(history)
 		}
 	}()
 }
 
 // Delete old logs
-func (db *Database) trimLogs(history time.Duration) {
+func (db *Database) trimNodeLogs(history time.Duration) {
 	// persist in database
 	db.writeQuery(&DatabaseQuery{
-		query: "DELETE FROM logs WHERE (at < ?)",
+		query: "DELETE FROM node_logs WHERE (at < ?)",
 		args:  []interface{}{time.Now().UTC().Add(-history).Unix()},
 	})
 }
 
 // Fetch logs for given node
-func (db *Database) logs(node *Node) []*Log {
-	result := make([]*Log, 0)
+func (db *Database) nodeLogs(node *Node) []*NodeLog {
+	result := make([]*NodeLog, 0)
 
 	// fetch nodes from db
-	rows, err := db.driver.Query("SELECT * FROM logs WHERE node_id=?", node.Id)
+	rows, err := db.driver.Query("SELECT * FROM node_logs WHERE node_id=?", node.Id)
 	if err != nil {
 		panic(log.Critical(err))
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var log *Log
+		var nodeLog *NodeLog
 
 		// fetch log fields
 		var (
+			id          int
 			node_id     int
 			at          int64
 			temperature sql.NullFloat64
@@ -393,40 +383,41 @@ func (db *Database) logs(node *Node) []*Log {
 		)
 
 		// @todo Use github.com/russross/meddler ?
-		rows.Scan(&node_id, &at, &temperature, &humidity, &light, &motion, &lowbat, &vcc)
+		rows.Scan(&id, &node_id, &at, &temperature, &humidity, &light, &motion, &lowbat, &vcc)
 
 		// init log
-		log = &Log{
+		nodeLog = &NodeLog{
+			Id:     id,
 			NodeId: node_id,
 			At:     time.Unix(at, 0),
 		}
 
 		if temperature.Valid {
-			log.Temperature = float64(temperature.Float64)
+			nodeLog.Temperature = float64(temperature.Float64)
 		}
 
 		if humidity.Valid {
-			log.Humidity = uint8(humidity.Int64)
+			nodeLog.Humidity = uint8(humidity.Int64)
 		}
 
 		if light.Valid {
-			log.Light = uint8(light.Int64)
+			nodeLog.Light = uint8(light.Int64)
 		}
 
 		if motion.Valid {
-			log.Motion = motion.Bool
+			nodeLog.Motion = motion.Bool
 		}
 
 		if lowbat.Valid {
-			log.LowBattery = lowbat.Bool
+			nodeLog.LowBattery = lowbat.Bool
 		}
 
 		if vcc.Valid {
-			log.Vcc = uint(vcc.Int64)
+			nodeLog.Vcc = uint(vcc.Int64)
 		}
 
 		// add log to list
-		result = append(result, log)
+		result = append(result, nodeLog)
 	}
 
 	return result

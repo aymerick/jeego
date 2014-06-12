@@ -1,12 +1,13 @@
 package main
 
 import (
-	log "code.google.com/p/log4go"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
+
+	log "code.google.com/p/log4go"
 )
 
 const (
@@ -96,7 +97,7 @@ func main() {
 	log.Info("Built with Go Version: %s", runtime.Version())
 
 	// save nodes values to database every 5mn
-	jeego.database.startLogsTicker(time.Minute * LOG_PERIOD, time.Hour * 24 * LOG_HISTORY)
+	jeego.database.startNodeLogsTicker(time.Minute*LOG_PERIOD, time.Hour*24*LOG_HISTORY)
 
 	// @todo Save nodes values to database every day
 

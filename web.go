@@ -133,9 +133,38 @@ func wrapHandlerNodeTemperatures(jeego *Jeego, meth string) http.HandlerFunc {
 			node := jeego.database.nodeForId(nodeId)
 			if node != nil {
 				// get logs
-				serie := node.temperaturesSerie(jeego.database.logs(node))
+				serie := node.temperaturesSerie(jeego.database.nodeLogs(node))
 
 				respondsWithJSON(w, map[string]interface{}{"temperatures": serie})
+			} else {
+				respondsWithError(w, http.StatusNotFound, fmt.Errorf("Node %d not found", nodeId))
+			}
+		}
+	}
+}
+
+// GET /api/nodes/:id/logs
+func wrapHandlerNodeLogs(jeego *Jeego, meth string) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		addAccessControlHeaders(w, meth)
+
+		// parse node id
+		nodeId, err := strconv.Atoi(req.URL.Query().Get(":id"))
+		if err != nil {
+			respondsWithError(w, http.StatusBadRequest, err)
+		} else {
+			// get node
+			node := jeego.database.nodeForId(nodeId)
+			if node != nil {
+				// get logs
+				nodeLogs := jeego.database.nodeLogs(node)
+				result := make([]interface{}, len(nodeLogs))
+
+				for index, nodeLog := range nodeLogs {
+					result[index] = nodeLog.toJsonifableMap(node)
+				}
+
+				respondsWithJSON(w, map[string]interface{}{"logs": result})
 			} else {
 				respondsWithError(w, http.StatusNotFound, fmt.Errorf("Node %d not found", nodeId))
 			}
@@ -163,6 +192,10 @@ func runWebServer(jeego *Jeego) {
 		nodeTempMeth := "OPTIONS, GET"
 		mux.Options("/api/nodes/:id/temperatures", wrapHandlerOptions(jeego, nodeTempMeth))
 		mux.Get("/api/nodes/:id/temperatures", wrapHandlerNodeTemperatures(jeego, nodeTempMeth))
+
+		nodeLogsMeth := "OPTIONS, GET"
+		mux.Options("/api/nodes/:id/logs", wrapHandlerOptions(jeego, nodeLogsMeth))
+		mux.Get("/api/nodes/:id/logs", wrapHandlerNodeLogs(jeego, nodeLogsMeth))
 
 		http.Handle("/", mux)
 		err := http.ListenAndServe(addr, nil)

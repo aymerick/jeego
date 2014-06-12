@@ -414,11 +414,11 @@ func (node *Node) domoticzParams(hardwareId string) string {
 	return result
 }
 
-func (node *Node) temperaturesSerie(logs []*Log) [][]string {
-	result := make([][]string, len(logs))
+func (node *Node) temperaturesSerie(nodeLogs []*NodeLog) [][]string {
+	result := make([][]string, len(nodeLogs))
 
-	for index, log := range logs {
-		serieData := []string{log.At.Format(time.RFC3339), fmt.Sprintf("%v", log.Temperature)}
+	for index, nodeLog := range nodeLogs {
+		serieData := []string{nodeLog.At.Format(time.RFC3339), fmt.Sprintf("%v", nodeLog.Temperature)}
 		result[index] = serieData
 	}
 

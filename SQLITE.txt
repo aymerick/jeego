@@ -1,0 +1,35 @@
+BEGIN TRANSACTION;
+CREATE TEMPORARY TABLE nodes_backup(
+    id INTEGER NOT NULL PRIMARY KEY,
+    kind INTEGER NOT NULL,
+    updated_at INTEGER,
+    last_seen_at INTEGER,
+    name TEXT,
+    domoticz_idx TEXT,
+    temperature REAL,
+    humidity INTEGER,
+    light INTEGER,
+    motion INTEGER,
+    lowbat INTEGER,
+    vcc INTEGER
+);
+INSERT INTO nodes_backup SELECT id,kind,updated_at,last_seen_at,name,domoticz_idx,temperature,humidity,light,motion,lowbat,vcc FROM nodes;
+DROP TABLE nodes;
+CREATE TABLE nodes(
+    id INTEGER NOT NULL PRIMARY KEY,
+    kind INTEGER NOT NULL,
+    updated_at INTEGER,
+    last_seen_at INTEGER,
+    name TEXT,
+    domoticz_idx TEXT,
+    temperature REAL,
+    humidity INTEGER,
+    light INTEGER,
+    motion INTEGER,
+    lowbat INTEGER,
+    vcc INTEGER
+);
+INSERT INTO nodes SELECT id,kind,updated_at,last_seen_at,name,domoticz_idx,temperature,humidity,light,motion,lowbat,vcc FROM nodes_backup;
+DROP TABLE nodes_backup;
+COMMIT;
+
