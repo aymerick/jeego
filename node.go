@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"time"
 
 	log "code.google.com/p/log4go"
@@ -40,15 +41,15 @@ type Node struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 	LastSeenAt  time.Time `json:"last_seen_at"`
 	Name        string    `json:"name"`
-	DomoticzIdx string    `json:"domoticz_idx,omitempty"`
+	DomoticzIdx string    `json:"domoticz_idx"`
 
 	// sensors
-	Temperature float64 `json:"temperature,omitempty"`
-	Humidity    uint8   `json:"humidity,omitempty"`
-	Light       uint8   `json:"light,omitempty"`
-	Motion      bool    `json:"motion,omitempty"`
-	LowBattery  bool    `json:"low_battery,omitempty"`
-	Vcc         uint    `json:"vcc,omitempty"`
+	Temperature float64 `json:"temperature"`
+	Humidity    uint8   `json:"humidity"`
+	Light       uint8   `json:"light"`
+	Motion      bool    `json:"motion"`
+	LowBattery  bool    `json:"low_battery"`
+	Vcc         uint    `json:"vcc"`
 }
 
 func init() {
@@ -316,6 +317,57 @@ func (node *Node) textData() string {
 	}
 
 	return result
+}
+
+// cf. http://stackoverflow.com/a/17323212
+func (node *Node) toJsonifableMap() map[string]interface{} {
+	result := make(map[string]interface{})
+
+	result[node.jsonFieldName("Id")] = node.Id
+	result[node.jsonFieldName("Kind")] = node.Kind
+	result[node.jsonFieldName("UpdatedAt")] = node.UpdatedAt
+	result[node.jsonFieldName("LastSeenAt")] = node.LastSeenAt
+	result[node.jsonFieldName("Name")] = node.Name
+
+	if node.DomoticzIdx != "" {
+		result[node.jsonFieldName("DomoticzIdx")] = node.DomoticzIdx
+	}
+
+	for _, sensor := range AllSensors {
+		if node.haveSensor(sensor) {
+			switch sensor {
+			case TEMP_SENSOR:
+				result[node.jsonFieldName("Temperature")] = node.Temperature
+
+			case HUMI_SENSOR:
+				result[node.jsonFieldName("Humidity")] = node.Humidity
+
+			case LIGHT_SENSOR:
+				result[node.jsonFieldName("Light")] = node.Light
+
+			case MOTION_SENSOR:
+				result[node.jsonFieldName("Motion")] = node.Motion
+
+			case LOWBAT_SENSOR:
+				result[node.jsonFieldName("LowBattery")] = node.LowBattery
+
+			case VCC_SENSOR:
+				result[node.jsonFieldName("Vcc")] = node.Vcc
+
+			default:
+				panic(log.Critical("Unknown sensor: %d", sensor))
+			}
+		}
+	}
+
+	return result
+}
+
+// get json field name for given struct field name
+func (node *Node) jsonFieldName(fieldName string) string {
+	rt := reflect.TypeOf(*node)
+	field, _ := rt.FieldByName(fieldName)
+	return field.Tag.Get("json")
 }
 
 // query parameters part to send to domoticz

@@ -47,12 +47,19 @@ func wrapHandlerOptions(jeego *Jeego, meth string) http.HandlerFunc {
 }
 
 // GET /api/nodes
+// @todo Handle pagination (cf. http://emberjs.com/guides/models/handling-metadata/)
 func wrapHandlerNodes(jeego *Jeego, meth string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		addAccessControlHeaders(w, meth)
 
-		// @todo Handle pagination (cf. http://emberjs.com/guides/models/handling-metadata/)
-		respondsWithJSON(w, map[string]interface{}{"nodes": jeego.database.nodes})
+		nodes := jeego.database.nodes
+		result := make([]interface{}, len(nodes))
+
+		for index, node := range nodes {
+			result[index] = node.toJsonifableMap()
+		}
+
+		respondsWithJSON(w, map[string]interface{}{"nodes": result})
 	}
 }
 
@@ -69,7 +76,7 @@ func wrapHandlerNode(jeego *Jeego, meth string) http.HandlerFunc {
 			// get node
 			node := jeego.database.nodeForId(nodeId)
 			if node != nil {
-				respondsWithJSON(w, map[string]interface{}{"node": node})
+				respondsWithJSON(w, map[string]interface{}{"node": node.toJsonifableMap()})
 			} else {
 				respondsWithError(w, http.StatusNotFound, fmt.Errorf("Node %d not found", nodeId))
 			}
@@ -105,7 +112,7 @@ func wrapHandlerUpdateNode(jeego *Jeego, meth string) http.HandlerFunc {
 
 					jeego.database.updateNode(node)
 
-					respondsWithJSON(w, map[string]interface{}{"node": node})
+					respondsWithJSON(w, map[string]interface{}{"node": node.toJsonifableMap()})
 				}
 			}
 		}
