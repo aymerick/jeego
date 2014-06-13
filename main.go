@@ -99,8 +99,6 @@ func main() {
 	// save nodes values to database every 5mn
 	jeego.database.startNodeLogsTicker(time.Minute*LOG_PERIOD, time.Hour*24*LOG_HISTORY)
 
-	// @todo Save nodes values to database every day
-
 	// start web server
 	runWebServer(jeego)
 

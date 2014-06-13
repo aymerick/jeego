@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"os/exec"
 	"strconv"
 
 	log "code.google.com/p/log4go"
@@ -172,13 +174,49 @@ func wrapHandlerNodeLogs(jeego *Jeego, meth string) http.HandlerFunc {
 	}
 }
 
+func setupWebApp(jeego *Jeego) string {
+	rootDirPath := os.Getenv("HOME")
+	if rootDirPath == "" {
+		rootDirPath = "/tmp"
+	}
+
+	dirPath := rootDirPath + "/jeego-web-dist"
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		log.Info("Cloning jeego-web-dist repo into: %s", dirPath)
+
+		cmd := exec.Command("git", "clone", "git@github.com:aymerick/jeego-web-dist.git", dirPath)
+		out, err := cmd.Output()
+		if err != nil {
+			log.Critical(string(out)) // @todo wat ?!
+			panic(log.Critical(err))
+		}
+	} else {
+		log.Info("Found jeego-web-dist repo at: %s", dirPath)
+	}
+
+	return dirPath
+}
+
 func runWebServer(jeego *Jeego) {
+	app_path := jeego.config.WebAppPath
+	if app_path == "" {
+		app_path = setupWebApp(jeego)
+	} else {
+		if _, err := os.Stat(app_path); os.IsNotExist(err) {
+			panic(log.Critical("Web app path specified in conf file does NOT exists: %s", app_path))
+		}
+
+		log.Info("Using web app at: %s", app_path)
+	}
+
 	go func() {
 		log.Info("Starting web server on port %d", jeego.config.WebServerPort)
 
 		addr := fmt.Sprintf(":%d", jeego.config.WebServerPort)
 
 		mux := pat.New()
+
+		// API endpoints
 
 		nodesMeth := "OPTIONS, GET"
 		mux.Options("/api/nodes", wrapHandlerOptions(jeego, nodesMeth))
@@ -197,7 +235,12 @@ func runWebServer(jeego *Jeego) {
 		mux.Options("/api/nodes/:id/logs", wrapHandlerOptions(jeego, nodeLogsMeth))
 		mux.Get("/api/nodes/:id/logs", wrapHandlerNodeLogs(jeego, nodeLogsMeth))
 
-		http.Handle("/", mux)
+		http.Handle("/api/", mux)
+
+		// admin files
+
+		http.Handle("/", http.FileServer(http.Dir(app_path)))
+
 		err := http.ListenAndServe(addr, nil)
 		if err != nil {
 			panic(log.Critical(err))

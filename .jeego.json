@@ -6,5 +6,6 @@
   "log_file": "jeego.log",
   "database_path": "./jeego.db",
   "web_server_port": 3000,
-  "rf12demo_log_file": "rf12demo.log"
+  "rf12demo_log_file": "rf12demo.log",
+  "web_app_path": "/Users/aymerick/Dev/github/jeego-web/dist"
 }

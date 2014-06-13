@@ -1,7 +1,6 @@
 package main
 
 import (
-	log "code.google.com/p/log4go"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -10,6 +9,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	log "code.google.com/p/log4go"
 )
 
 // Serial port:
@@ -38,6 +39,7 @@ type Config struct {
 	LogFile            string `json:"log_file"`
 	DatabasePath       string `json:"database_path"`
 	WebServerPort      int    `json:"web_server_port"`
+	WebAppPath         string `json:"web_app_path"`
 	Rf12demoLogFile    string `json:"rf12demo_log_file"`
 }
 
