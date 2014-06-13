@@ -237,7 +237,7 @@ func runWebServer(jeego *Jeego) {
 
 		http.Handle("/api/", mux)
 
-		// admin files
+		// Web App files
 
 		http.Handle("/", http.FileServer(http.Dir(app_path)))
 
