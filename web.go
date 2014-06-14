@@ -184,7 +184,7 @@ func setupWebApp(jeego *Jeego) string {
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		log.Info("Cloning jeego-web-dist repo into: %s", dirPath)
 
-		cmd := exec.Command("git", "clone", "git@github.com:aymerick/jeego-web-dist.git", dirPath)
+		cmd := exec.Command("git", "clone", "https://github.com/aymerick/jeego-web-dist.git", dirPath)
 		out, err := cmd.Output()
 		if err != nil {
 			log.Critical(string(out)) // @todo wat ?!

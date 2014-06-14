@@ -29,9 +29,10 @@ CREATE TABLE nodes(
     lowbat INTEGER,
     vcc INTEGER
 );
-INSERT INTO nodes SELECT id,kind,updated_at,last_seen_at,name,domoticz_idx,temperature,humidity,light,motion,lowbat,vcc FROM nodes_backup;
-DROP TABLE nodes_backup;
+INSERT INTO nodes (kind,updated_at,last_seen_at,name,domoticz_idx,temperature,humidity,light,motion,lowbat,vcc) SELECT kind,updated_at,last_seen_at,name,domoticz_idx,temperature,humidity,light,motion,lowbat,vcc FROM nodes_backup;
 COMMIT;
+
+// DROP TABLE nodes_backup;
 
 
 BEGIN TRANSACTION;
@@ -60,3 +61,5 @@ CREATE TABLE node_logs(
 );
 INSERT INTO node_logs (node_id,at,temperature,humidity,light,motion,lowbat,vcc) SELECT node_id,at,temperature,humidity,light,motion,lowbat,vcc FROM logs_backup;
 COMMIT;
+
+// DROP TABLE logs_backup;
