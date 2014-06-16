@@ -360,6 +360,10 @@ func (node *Node) toJsonifableMap() map[string]interface{} {
 		}
 	}
 
+	// this emberjs convention for async relationships retrieval
+	// @todo Move that to web.go
+	result["links"] = map[string]interface{}{"logs": fmt.Sprintf("/api/nodes/%d/logs", node.Id)}
+
 	return result
 }
 
