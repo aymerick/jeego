@@ -11,6 +11,7 @@ import (
 
 	log "code.google.com/p/log4go"
 	"github.com/bmizerany/pat"
+	"github.com/gorilla/websocket"
 )
 
 type NodeJSON struct {
@@ -174,6 +175,35 @@ func wrapHandlerNodeLogs(jeego *Jeego, meth string) http.HandlerFunc {
 	}
 }
 
+// websocket upgrader
+var wsUpgrader = &websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		// accepts all origins
+		return true
+	},
+}
+
+// websocket handler
+func wrapHandlerWs(jeego *Jeego) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ws, err := wsUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+
+		// setup new connection
+		conn := &wsConnection{send: make(chan []byte, 256), ws: ws}
+
+		jeego.wsHub.register <- conn
+		defer func() { jeego.wsHub.unregister <- conn }()
+
+		conn.writer()
+	}
+}
+
 func setupWebApp(jeego *Jeego) string {
 	rootDirPath := os.Getenv("HOME")
 	if rootDirPath == "" {
@@ -236,6 +266,10 @@ func runWebServer(jeego *Jeego) {
 		mux.Get("/api/nodes/:id/logs", wrapHandlerNodeLogs(jeego, nodeLogsMeth))
 
 		http.Handle("/api/", mux)
+
+		// Web Socket endpoint
+
+		http.HandleFunc("/ws", wrapHandlerWs(jeego))
 
 		// Web App files
 

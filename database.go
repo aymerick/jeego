@@ -47,7 +47,6 @@ type Database struct {
 	driver      *sql.DB
 	queryWriter chan *DatabaseQuery
 	nodes       []*Node
-	logsTicker  *time.Ticker
 }
 
 // Database Query
@@ -328,22 +327,6 @@ func (db *Database) insertNodeLogs() {
 	for _, node := range db.nodes {
 		db.insertNodeLog(node)
 	}
-}
-
-// Add a log entry every 5 minutes
-func (db *Database) startNodeLogsTicker(period time.Duration, history time.Duration) {
-	db.logsTicker = time.NewTicker(period)
-
-	// do it right now
-	db.insertNodeLogs()
-
-	go func() {
-		for _ = range db.logsTicker.C {
-			db.insertNodeLogs()
-
-			db.trimNodeLogs(history)
-		}
-	}()
 }
 
 // Delete old logs

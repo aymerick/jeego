@@ -71,6 +71,10 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 				// update database
 				jeego.database.updateNode(node)
 
+				// @todo send to websocket clients right now, instead of in runNodeLogsTicker()
+				//       ... so get rid of the runNodeLogsTicker() mecanism please
+				// jeego.wsHub.sendMsg([]byte(node.textData()))
+
 				// push to domoticz
 				go pushToDomoticz(jeego.config, node)
 
