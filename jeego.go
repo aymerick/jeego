@@ -21,35 +21,21 @@ type Jeego struct {
 }
 
 func newJeego() *Jeego {
-	result := &Jeego{}
+	return &Jeego{}
+}
 
+func (jeego *Jeego) loadConfig() {
 	var err error
 
 	// load config
-	result.config, err = loadConfig()
+	jeego.config, err = loadConfig()
 	if err != nil {
 		panic(log.Critical(err))
 	}
+}
 
-	// setup logging
-	result.setupLogging()
-
-	log.Debug("Jeego config: %+v", result.config)
-
-	// load database
-	result.database, err = loadDatabase(result.config.DatabasePath)
-	if err != nil {
-		panic(log.Critical(err))
-	}
-
-	log.Info("Jeego database loaded with %d nodes: %v", len(result.database.nodes), result.config.DatabasePath)
-
-	// debug
-	for _, node := range result.database.nodes {
-		node.logDebug(node.textData())
-	}
-
-	return result
+func (jeego *Jeego) dumpConfig() {
+	log.Debug("Jeego config: %+v", jeego.config)
 }
 
 func (jeego *Jeego) setupLogging() {
@@ -86,6 +72,23 @@ func (jeego *Jeego) setupLogging() {
 	}
 
 	log.Info("Logging to file: %s", jeego.config.LogFile)
+}
+
+func (jeego *Jeego) setupDatabase() {
+	var err error
+
+	// load database
+	jeego.database, err = loadDatabase(jeego.config.DatabasePath)
+	if err != nil {
+		panic(log.Critical(err))
+	}
+
+	log.Info("Jeego database loaded with %d nodes: %v", len(jeego.database.nodes), jeego.config.DatabasePath)
+
+	// debug
+	for _, node := range jeego.database.nodes {
+		node.logDebug(node.textData())
+	}
 }
 
 // Add a log entry every 5 minutes

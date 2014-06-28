@@ -11,10 +11,16 @@ func main() {
 	// init Jeego
 	jeego := newJeego()
 
+	jeego.loadConfig()
 	jeego.setupLogging()
 
 	log.Info("Jeego - Target OS/Arch: %s %s", runtime.GOOS, runtime.GOARCH)
 	log.Info("Built with Go Version: %s", runtime.Version())
+
+	// debug
+	jeego.dumpConfig()
+
+	jeego.setupDatabase()
 
 	// save nodes values to database every 5mn
 	jeego.runNodeLogsTicker()
