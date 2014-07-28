@@ -8,6 +8,7 @@ import (
 	log "code.google.com/p/log4go"
 
 	"github.com/aymerick/jeego/pkg/config"
+	"github.com/aymerick/jeego/pkg/domoticz"
 	"github.com/aymerick/jeego/pkg/ws_hub"
 )
 
@@ -21,6 +22,7 @@ type Jeego struct {
 	Config   *config.Config
 	Database *Database
 	wsHub    *ws_hub.WsHub
+	Domoticz *domoticz.Domoticz
 }
 
 func NewJeego() *Jeego {
@@ -117,11 +119,28 @@ func (jeego *Jeego) RunNodeLogsTicker() {
 	}()
 }
 
+// Setup domoticz remote
+func (jeego *Jeego) SetupDomoticz() {
+	if jeego.Config.DomoticzHost != "" {
+		jeego.Domoticz = &domoticz.Domoticz{
+			Host:       jeego.Config.DomoticzHost,
+			Port:       jeego.Config.DomoticzPort,
+			HardwareId: jeego.Config.DomoticzHardwareId,
+		}
+	}
+}
+
 // Start Websocket Hub
 func (jeego *Jeego) StartWsHub() {
 	jeego.wsHub = ws_hub.Run()
 }
 
+// Start Web Server
 func (jeego *Jeego) StartWebServer() {
 	RunWebServer(jeego)
+}
+
+// Start RF12demo handler
+func (jeego *Jeego) StartRf12demo() chan string {
+	return RunRf12demo(jeego)
 }

@@ -5,11 +5,16 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/aymerick/jeego/pkg/app"
-	"github.com/aymerick/jeego/pkg/config"
+	log "code.google.com/p/log4go"
 )
 
-// @todo Make that pkg independant from app and config pkgs
+// @todo Make that pkg independant from config pkg
+
+type Domoticz struct {
+	Host       string
+	Port       int
+	HardwareId string
+}
 
 //
 // Device can be created dynamically by using those parameters instead of 'idx':
@@ -33,24 +38,23 @@ import (
 //  dtype: 80   => pTypeTEMP 0x50 (temperature)
 //  dsubtype: 1 => sTypeTEMP1 0x1  //THR128/138,THC138
 //
-func PushToDomoticz(config *config.Config, node *app.Node) {
-	if config.DomoticzHost != "" {
-		params := node.DomoticzParams(config.DomoticzHardwareId)
+func (server *Domoticz) Push(params string) {
+	if server.Host != "" {
 		if params != "" {
-			url := fmt.Sprintf("http://%s:%d/json.htm?type=command&param=udevice&%s", config.DomoticzHost, config.DomoticzPort, params)
+			url := fmt.Sprintf("http://%s:%d/json.htm?type=command&param=udevice&%s", server.Host, server.Port, params)
 
-			node.LogDebug(fmt.Sprintf("Pushing to domoticz: %s", url))
+			log.Debug(fmt.Sprintf("Pushing to domoticz: %s", url))
 
 			resp, err := http.Get(url)
 			if err != nil {
-				node.LogWarn("Failed to push value to domoticz")
+				log.Warn("Failed to push value to domoticz")
 			} else {
 				respText, err := ioutil.ReadAll(resp.Body)
 				resp.Body.Close()
 				if err != nil {
-					node.LogWarn("Failed to get domoticz response")
+					log.Warn("Failed to get domoticz response")
 				} else {
-					node.LogDebug(fmt.Sprintf("Domoticz response: %s", respText))
+					log.Debug(fmt.Sprintf("Domoticz response: %s", respText))
 				}
 			}
 		}

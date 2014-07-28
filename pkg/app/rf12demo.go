@@ -1,4 +1,4 @@
-package rf12demo
+package app
 
 import (
 	"errors"
@@ -8,9 +8,6 @@ import (
 	"time"
 
 	log "code.google.com/p/log4go"
-
-	"github.com/aymerick/jeego/pkg/app"
-	"github.com/aymerick/jeego/pkg/domoticz"
 )
 
 // Rf12demo Data Log
@@ -22,7 +19,7 @@ type Rf12demoDataLog struct {
 }
 
 // Start RF12demo handler
-func Run(jeego *app.Jeego) chan string {
+func RunRf12demo(jeego *Jeego) chan string {
 	inputChan := make(chan string, 1)
 
 	go func() {
@@ -79,7 +76,9 @@ func Run(jeego *app.Jeego) chan string {
 				// jeego.wsHub.SendMsg([]byte(node.TextData()))
 
 				// push to domoticz
-				go domoticz.PushToDomoticz(jeego.Config, node)
+				if jeego.Domoticz != nil {
+					go jeego.Domoticz.Push(node.DomoticzParams(jeego.Domoticz.HardwareId))
+				}
 
 				// @todo insert in InfluxDB
 			}
@@ -90,7 +89,7 @@ func Run(jeego *app.Jeego) chan string {
 }
 
 // Start RF12demo logger
-func runRf12demoLogger(jeego *app.Jeego) chan string {
+func runRf12demoLogger(jeego *Jeego) chan string {
 	inputChan := make(chan string, 1)
 
 	go func() {

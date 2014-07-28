@@ -8,7 +8,7 @@ Install
 =======
 
 ```bash
-$ go get github.com/aymerick/jeego
+$ go get github.com/aymerick/jeego/jeego
 ```
 
 
