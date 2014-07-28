@@ -42,7 +42,7 @@ $ ln -s ~/Dev/go/src/github.com/aymerick/jeego/.jeego.json ~/
 ```
 
 ```bash
-$ cd ~/Dev/go/src/github.com/aymerick/jeego
+$ cd ~/Dev/go/src/github.com/aymerick/jeego/jeego
 $ go build
 $ ./jeego
 ```

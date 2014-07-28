@@ -1,9 +1,10 @@
-package main
+package serial_reader
 
 import (
+	"io"
+
 	log "code.google.com/p/log4go"
 	"github.com/chimera/rs232"
-	"io"
 )
 
 const (
@@ -16,8 +17,8 @@ type SerialReader struct {
 }
 
 // Instanciate a serial port reader
-func newSerialReader(port string, baud int) *SerialReader {
-	options := rs232.Options{ BitRate: uint32(baud), DataBits: 8, StopBits: 1 }
+func New(port string, baud int) *SerialReader {
+	options := rs232.Options{BitRate: uint32(baud), DataBits: 8, StopBits: 1}
 	ser, err := rs232.Open(port, options)
 
 	if err != nil {
@@ -28,13 +29,13 @@ func newSerialReader(port string, baud int) *SerialReader {
 }
 
 // Read a line from serial port
-func (ser *SerialReader) readLine() string {
+func (serial_reader *SerialReader) ReadLine() string {
 	result := make([]byte, 0)
 	lastRead := make([]byte, 1)
 
 	// read byte by byte until the Line Feed character
 	for lastRead[0] != LF_CHAR {
-		n, err := ser.Read(lastRead)
+		n, err := serial_reader.Read(lastRead)
 		if (err != nil) || (n != 1) {
 			panic(log.Critical(err))
 		}

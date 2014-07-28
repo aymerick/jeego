@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"os"
@@ -12,7 +12,7 @@ import (
 const TEST_DB_PATH = "./jeego-test.db"
 
 func newDatabase() *Database {
-	db, _ := loadDatabase(TEST_DB_PATH)
+	db, _ := LoadDatabase(TEST_DB_PATH)
 	return db
 }
 
@@ -30,7 +30,7 @@ func Test_InsertNode(t *testing.T) {
 
 	assert.Equal(t, len(db.nodes), 0)
 
-	db.insertNode(2, JEENODE_THLM_NODE)
+	db.InsertNode(2, JEENODE_THLM_NODE)
 
 	db2 := newDatabase()
 	defer destroyDatabase(db2)
@@ -68,8 +68,8 @@ func Test_UpdateNode(t *testing.T) {
 
 	assert.Equal(t, len(db.nodes), 0)
 
-	node2 := db.insertNode(2, JEENODE_THLM_NODE)
-	node3 := db.insertNode(3, TINYTX_TH_NODE)
+	node2 := db.InsertNode(2, JEENODE_THLM_NODE)
+	node3 := db.InsertNode(3, TINYTX_TH_NODE)
 
 	node2.Temperature = float64(21.3)
 	node2.Humidity = uint8(74)
@@ -77,26 +77,26 @@ func Test_UpdateNode(t *testing.T) {
 	node2.Motion = true
 	node2.LowBattery = false
 
-	db.updateNode(node2)
+	db.UpdateNode(node2)
 
 	node3.Temperature = float64(19.4)
 	node3.Vcc = 3096
 
-	db.updateNode(node3)
+	db.UpdateNode(node3)
 
 	db2 := newDatabase()
 	defer destroyDatabase(db2)
 
 	assert.Equal(t, len(db2.nodes), 2)
 
-	node2 = db2.nodeForId(2)
+	node2 = db2.NodeForId(2)
 	assert.Equal(t, node2.Temperature, float64(21.3))
 	assert.Equal(t, node2.Humidity, uint8(74))
 	assert.Equal(t, node2.Light, uint8(61))
 	assert.Equal(t, node2.Motion, true)
 	assert.Equal(t, node2.LowBattery, false)
 
-	node3 = db2.nodeForId(3)
+	node3 = db2.NodeForId(3)
 	assert.Equal(t, node3.Temperature, float64(19.4))
 	assert.Equal(t, node3.Vcc, uint(3096))
 }
@@ -130,8 +130,8 @@ func Test_InsertLogs(t *testing.T) {
 
 	assert.Equal(t, len(db.nodes), 0)
 
-	node2 := db.insertNode(2, JEENODE_THLM_NODE)
-	node3 := db.insertNode(3, TINYTX_TH_NODE)
+	node2 := db.InsertNode(2, JEENODE_THLM_NODE)
+	node3 := db.InsertNode(3, TINYTX_TH_NODE)
 
 	node2.Temperature = float64(21.3)
 	node2.Humidity = uint8(74)

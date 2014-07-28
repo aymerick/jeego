@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"fmt"
@@ -27,6 +27,9 @@ const (
 	LOWBAT_SENSOR        // Low Battery
 	VCC_SENSOR           // Supply voltage
 )
+
+// base to compute Device ID
+const DOMOTICZ_DEVICE_ID_BASE = 2000
 
 type Sensor uint
 
@@ -74,7 +77,7 @@ func init() {
 }
 
 // log formatted debug message
-func (node *Node) logDebug(msg string) {
+func (node *Node) LogDebug(msg string) {
 	nodeName := node.Name
 	if nodeName == "" {
 		nodeName = "Unnamed"
@@ -84,7 +87,7 @@ func (node *Node) logDebug(msg string) {
 }
 
 // log formatted warn message
-func (node *Node) logWarn(msg string) {
+func (node *Node) LogWarn(msg string) {
 	nodeName := node.Name
 	if nodeName == "" {
 		nodeName = "Unnamed"
@@ -123,7 +126,7 @@ func (node *Node) haveSensor(sensor Sensor) bool {
 }
 
 // reset sensors values
-func (node *Node) resetSensors() {
+func (node *Node) ResetSensors() {
 	node.Temperature = float64(0)
 	node.Humidity = uint8(0)
 	node.Light = uint8(0)
@@ -133,7 +136,7 @@ func (node *Node) resetSensors() {
 }
 
 // handle incoming node data
-func (node *Node) handleData(data []byte) {
+func (node *Node) HandleData(data []byte) {
 	if node.sensors() != nil {
 		expectedLength := node.expectedDataLength()
 		if len(data) == expectedLength {
@@ -305,7 +308,7 @@ func (node *Node) sensorValue(sensor Sensor) interface{} {
 }
 
 // text to display for debugging
-func (node *Node) textData() string {
+func (node *Node) TextData() string {
 	result := ""
 
 	for _, sensor := range node.sensors() {
@@ -375,7 +378,7 @@ func (node *Node) jsonFieldName(fieldName string) string {
 }
 
 // query parameters part to send to domoticz
-func (node *Node) domoticzParams(hardwareId string) string {
+func (node *Node) DomoticzParams(hardwareId string) string {
 	result := ""
 
 	isPushable := (node.DomoticzIdx != "") || (hardwareId != "")

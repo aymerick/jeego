@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"database/sql"
@@ -68,7 +68,7 @@ func init() {
 }
 
 // Setup a new database connection and load nodes
-func loadDatabase(databasePath string) (*Database, error) {
+func LoadDatabase(databasePath string) (*Database, error) {
 	// open
 	sqlDriver, err := sql.Open("sqlite3", databasePath)
 	if err != nil {
@@ -214,7 +214,7 @@ func (db *Database) loadNodes() {
 }
 
 // Get a node
-func (db *Database) nodeForId(id int) *Node {
+func (db *Database) NodeForId(id int) *Node {
 	for _, node := range db.nodes {
 		if node.Id == id {
 			return node
@@ -225,7 +225,7 @@ func (db *Database) nodeForId(id int) *Node {
 }
 
 // Insert a new node
-func (db *Database) insertNode(id int, kind int) *Node {
+func (db *Database) InsertNode(id int, kind int) *Node {
 	name := fmt.Sprintf("Node %d", id)
 
 	// init node
@@ -277,7 +277,7 @@ func updateNodeQuery(node *Node) *DatabaseQuery {
 }
 
 // Update node
-func (db *Database) updateNode(node *Node) {
+func (db *Database) UpdateNode(node *Node) {
 	if len(node.sensors()) > 0 {
 		node.UpdatedAt = time.Now().UTC()
 

@@ -1,4 +1,4 @@
-package main
+package ws_hub
 
 import (
 	log "code.google.com/p/log4go"
@@ -13,13 +13,13 @@ import (
  * Connection
  */
 
-type wsConnection struct {
+type WsConnection struct {
 	ws *websocket.Conn
 
 	send chan []byte
 }
 
-func (conn *wsConnection) writer() {
+func (conn *WsConnection) WriterLoop() {
 	for message := range conn.send {
 		err := conn.ws.WriteMessage(websocket.TextMessage, message)
 		if err != nil {
@@ -36,33 +36,44 @@ func (conn *wsConnection) writer() {
 
 type WsHub struct {
 	// Registered connections.
-	connections map[*wsConnection]bool
+	connections map[*WsConnection]bool
 
 	// Inbound messages from the connections.
 	broadcast chan []byte
 
 	// Register requests from the connections.
-	register chan *wsConnection
+	register chan *WsConnection
 
 	// Unregister requests from connections.
-	unregister chan *wsConnection
+	unregister chan *WsConnection
 }
 
-func newWsHub() *WsHub {
+func New() *WsHub {
 	return &WsHub{
 		broadcast:   make(chan []byte),
-		register:    make(chan *wsConnection),
-		unregister:  make(chan *wsConnection),
-		connections: make(map[*wsConnection]bool),
+		register:    make(chan *WsConnection),
+		unregister:  make(chan *WsConnection),
+		connections: make(map[*WsConnection]bool),
 	}
 }
 
-func runWsHub() *WsHub {
-	result := newWsHub()
+func Run() *WsHub {
+	result := New()
 
 	go result.run()
 
 	return result
+}
+
+func (hub *WsHub) RegisterConn(wsConn *websocket.Conn) *WsConnection {
+	conn := &WsConnection{send: make(chan []byte, 256), ws: wsConn}
+	hub.register <- conn
+
+	return conn
+}
+
+func (hub *WsHub) UnregisterConn(conn *WsConnection) {
+	hub.unregister <- conn
 }
 
 func (hub *WsHub) run() {
@@ -86,6 +97,6 @@ func (hub *WsHub) run() {
 	}
 }
 
-func (hub *WsHub) sendMsg(msg []byte) {
+func (hub *WsHub) SendMsg(msg []byte) {
 	hub.broadcast <- msg
 }

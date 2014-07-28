@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"encoding/json"
@@ -55,7 +55,7 @@ func wrapHandlerNodes(jeego *Jeego, meth string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		addAccessControlHeaders(w, meth)
 
-		nodes := jeego.database.nodes
+		nodes := jeego.Database.nodes
 		result := make([]interface{}, len(nodes))
 
 		for index, node := range nodes {
@@ -77,7 +77,7 @@ func wrapHandlerNode(jeego *Jeego, meth string) http.HandlerFunc {
 			respondsWithError(w, http.StatusBadRequest, err)
 		} else {
 			// get node
-			node := jeego.database.nodeForId(nodeId)
+			node := jeego.Database.NodeForId(nodeId)
 			if node != nil {
 				respondsWithJSON(w, map[string]interface{}{"node": node.toJsonifableMap()})
 			} else {
@@ -106,14 +106,14 @@ func wrapHandlerUpdateNode(jeego *Jeego, meth string) http.HandlerFunc {
 				respondsWithError(w, http.StatusBadRequest, err)
 			} else {
 				// get node
-				node := jeego.database.nodeForId(nodeId)
+				node := jeego.Database.NodeForId(nodeId)
 				if node == nil {
 					respondsWithError(w, http.StatusNotFound, fmt.Errorf("Node %d not found", nodeId))
 				} else {
 					// update node
 					node.Name = nodeJSON.Node.Name
 
-					jeego.database.updateNode(node)
+					jeego.Database.UpdateNode(node)
 
 					respondsWithJSON(w, map[string]interface{}{"node": node.toJsonifableMap()})
 				}
@@ -133,10 +133,10 @@ func wrapHandlerNodeTemperatures(jeego *Jeego, meth string) http.HandlerFunc {
 			respondsWithError(w, http.StatusBadRequest, err)
 		} else {
 			// get node
-			node := jeego.database.nodeForId(nodeId)
+			node := jeego.Database.NodeForId(nodeId)
 			if node != nil {
 				// get logs
-				serie := node.temperaturesSerie(jeego.database.nodeLogs(node))
+				serie := node.temperaturesSerie(jeego.Database.nodeLogs(node))
 
 				respondsWithJSON(w, map[string]interface{}{"temperatures": serie})
 			} else {
@@ -157,10 +157,10 @@ func wrapHandlerNodeLogs(jeego *Jeego, meth string) http.HandlerFunc {
 			respondsWithError(w, http.StatusBadRequest, err)
 		} else {
 			// get node
-			node := jeego.database.nodeForId(nodeId)
+			node := jeego.Database.NodeForId(nodeId)
 			if node != nil {
 				// get logs
-				nodeLogs := jeego.database.nodeLogs(node)
+				nodeLogs := jeego.Database.nodeLogs(node)
 				result := make([]interface{}, len(nodeLogs))
 
 				for index, nodeLog := range nodeLogs {
@@ -195,12 +195,10 @@ func wrapHandlerWs(jeego *Jeego) http.HandlerFunc {
 		}
 
 		// setup new connection
-		conn := &wsConnection{send: make(chan []byte, 256), ws: ws}
+		conn := jeego.wsHub.RegisterConn(ws)
+		defer func() { jeego.wsHub.UnregisterConn(conn) }()
 
-		jeego.wsHub.register <- conn
-		defer func() { jeego.wsHub.unregister <- conn }()
-
-		conn.writer()
+		conn.WriterLoop()
 	}
 }
 
@@ -227,8 +225,8 @@ func setupWebApp(jeego *Jeego) string {
 	return dirPath
 }
 
-func runWebServer(jeego *Jeego) {
-	app_path := jeego.config.WebAppPath
+func RunWebServer(jeego *Jeego) {
+	app_path := jeego.Config.WebAppPath
 	if app_path == "" {
 		app_path = setupWebApp(jeego)
 	} else {
@@ -240,9 +238,9 @@ func runWebServer(jeego *Jeego) {
 	}
 
 	go func() {
-		log.Info("Starting web server on port %d", jeego.config.WebServerPort)
+		log.Info("Starting web server on port %d", jeego.Config.WebServerPort)
 
-		addr := fmt.Sprintf(":%d", jeego.config.WebServerPort)
+		addr := fmt.Sprintf(":%d", jeego.Config.WebServerPort)
 
 		mux := pat.New()
 

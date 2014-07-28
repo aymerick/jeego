@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"bytes"
@@ -44,7 +44,7 @@ type Config struct {
 }
 
 // borrowed from https://github.com/mitchellh/packer
-func loadConfig() (*Config, error) {
+func Load() (*Config, error) {
 	var config Config
 	if err := decodeConfig(bytes.NewBufferString(defaultConfig), &config); err != nil {
 		return nil, err

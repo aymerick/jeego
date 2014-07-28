@@ -1,4 +1,4 @@
-package main
+package rf12demo
 
 import (
 	"errors"
@@ -8,6 +8,9 @@ import (
 	"time"
 
 	log "code.google.com/p/log4go"
+
+	"github.com/aymerick/jeego/pkg/app"
+	"github.com/aymerick/jeego/pkg/domoticz"
 )
 
 // Rf12demo Data Log
@@ -19,14 +22,14 @@ type Rf12demoDataLog struct {
 }
 
 // Start RF12demo handler
-func runRf12demoHandler(jeego *Jeego) chan string {
+func Run(jeego *app.Jeego) chan string {
 	inputChan := make(chan string, 1)
 
 	go func() {
 		var line string
 		var loggerChan chan string
 
-		if jeego.config.Rf12demoLogFile != "" {
+		if jeego.Config.Rf12demoLogFile != "" {
 			loggerChan = runRf12demoLogger(jeego)
 		}
 
@@ -43,40 +46,40 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 				}
 
 				// get node
-				node := jeego.database.nodeForId(dataLog.nodeId)
+				node := jeego.Database.NodeForId(dataLog.nodeId)
 				if node == nil {
 					// insert new node in database
-					node = jeego.database.insertNode(dataLog.nodeId, dataLog.nodeKind)
+					node = jeego.Database.InsertNode(dataLog.nodeId, dataLog.nodeKind)
 
 					// debug
-					node.logDebug("Added to database")
+					node.LogDebug("Added to database")
 				} else if node.Kind != dataLog.nodeKind {
 					// debug
-					node.logDebug(fmt.Sprintf("Kind changed from %d to %d", node.Kind, dataLog.nodeKind))
+					node.LogDebug(fmt.Sprintf("Kind changed from %d to %d", node.Kind, dataLog.nodeKind))
 
 					node.Kind = dataLog.nodeKind
 
 					// reset sensors values
-					node.resetSensors()
+					node.ResetSensors()
 				}
 
 				node.LastSeenAt = time.Now().UTC()
 
 				// handle data
-				node.handleData(dataLog.data)
+				node.HandleData(dataLog.data)
 
 				// debug
-				node.logDebug(node.textData())
+				node.LogDebug(node.TextData())
 
 				// update database
-				jeego.database.updateNode(node)
+				jeego.Database.UpdateNode(node)
 
 				// @todo send to websocket clients right now, instead of in runNodeLogsTicker()
 				//       ... so get rid of the runNodeLogsTicker() mecanism please
-				// jeego.wsHub.sendMsg([]byte(node.textData()))
+				// jeego.wsHub.SendMsg([]byte(node.TextData()))
 
 				// push to domoticz
-				go pushToDomoticz(jeego.config, node)
+				go domoticz.PushToDomoticz(jeego.Config, node)
 
 				// @todo insert in InfluxDB
 			}
@@ -87,13 +90,13 @@ func runRf12demoHandler(jeego *Jeego) chan string {
 }
 
 // Start RF12demo logger
-func runRf12demoLogger(jeego *Jeego) chan string {
+func runRf12demoLogger(jeego *app.Jeego) chan string {
 	inputChan := make(chan string, 1)
 
 	go func() {
 		var line string
 
-		flw := log.NewFileLogWriter(jeego.config.Rf12demoLogFile, false)
+		flw := log.NewFileLogWriter(jeego.Config.Rf12demoLogFile, false)
 		flw.SetFormat("%M")
 		flw.SetRotate(true)
 		flw.SetRotateSize(0)
@@ -103,7 +106,7 @@ func runRf12demoLogger(jeego *Jeego) chan string {
 		rawLogger := log.NewDefaultLogger(log.DEBUG)
 		rawLogger.AddFilter("file", log.INFO, flw)
 
-		log.Info("Logging RF12demo data to file: %s", jeego.config.Rf12demoLogFile)
+		log.Info("Logging RF12demo data to file: %s", jeego.Config.Rf12demoLogFile)
 
 		// loop forever
 		for {
