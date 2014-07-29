@@ -195,8 +195,8 @@ func wrapHandlerWs(jeego *Jeego) http.HandlerFunc {
 		}
 
 		// setup new connection
-		conn := jeego.wsHub.RegisterConn(ws)
-		defer func() { jeego.wsHub.UnregisterConn(conn) }()
+		conn := jeego.WsHub.RegisterConn(ws)
+		defer func() { jeego.WsHub.UnregisterConn(conn) }()
 
 		conn.WriterLoop()
 	}

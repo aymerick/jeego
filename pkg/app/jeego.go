@@ -21,7 +21,7 @@ const (
 type Jeego struct {
 	Config   *config.Config
 	Database *Database
-	wsHub    *ws_hub.WsHub
+	WsHub    *ws_hub.WsHub
 	Domoticz *domoticz.Domoticz
 }
 
@@ -110,7 +110,7 @@ func (jeego *Jeego) RunNodeLogsTicker() {
 
 			// @todo send to websocket clients
 			for _, node := range jeego.Database.nodes {
-				jeego.wsHub.SendMsg([]byte(node.TextData()))
+				jeego.WsHub.SendMsg([]byte(node.TextData()))
 			}
 
 			// trim old logs
@@ -132,7 +132,7 @@ func (jeego *Jeego) SetupDomoticz() {
 
 // Start Websocket Hub
 func (jeego *Jeego) StartWsHub() {
-	jeego.wsHub = ws_hub.Run()
+	jeego.WsHub = ws_hub.Run()
 }
 
 // Start Web Server

@@ -13,6 +13,8 @@ import (
 	log "code.google.com/p/log4go"
 )
 
+// Reference: https://github.com/mitchellh/packer
+
 // Serial port:
 //   - Jeelink on Mac: /dev/tty.usbserial-A1014IM4
 //   - Jeelink on Raspberry: /dev/ttyUSB0
@@ -29,6 +31,7 @@ const defaultConfig = `
 }
 `
 
+// Jeego configuration
 type Config struct {
 	SerialPort         string `json:"serial_port"`
 	SerialBaud         int    `json:"serial_baud"`
@@ -43,7 +46,7 @@ type Config struct {
 	Rf12demoLogFile    string `json:"rf12demo_log_file"`
 }
 
-// borrowed from https://github.com/mitchellh/packer
+// Load config from conf file
 func Load() (*Config, error) {
 	var config Config
 	if err := decodeConfig(bytes.NewBufferString(defaultConfig), &config); err != nil {
@@ -89,13 +92,11 @@ func Load() (*Config, error) {
 	return &config, nil
 }
 
-// borrowed from https://github.com/mitchellh/packer
 func decodeConfig(r io.Reader, c *Config) error {
 	decoder := json.NewDecoder(r)
 	return decoder.Decode(c)
 }
 
-// borrowed from https://github.com/mitchellh/packer
 func configFile() (string, error) {
 	dir, err := configDir()
 	if err != nil {
@@ -105,7 +106,6 @@ func configFile() (string, error) {
 	return filepath.Join(dir, ".jeego.json"), nil
 }
 
-// borrowed from https://github.com/mitchellh/packer
 func configDir() (string, error) {
 	// First prefer the HOME environmental variable
 	if home := os.Getenv("HOME"); home != "" {

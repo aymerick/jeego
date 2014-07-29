@@ -9,16 +9,14 @@ import (
  * Reference: https://gist.github.com/garyburd/1316852
  */
 
-/**
- * Connection
- */
-
+// WebSocket connection
 type WsConnection struct {
 	ws *websocket.Conn
 
 	send chan []byte
 }
 
+// Write loop
 func (conn *WsConnection) WriterLoop() {
 	for message := range conn.send {
 		err := conn.ws.WriteMessage(websocket.TextMessage, message)
@@ -30,24 +28,22 @@ func (conn *WsConnection) WriterLoop() {
 	conn.ws.Close()
 }
 
-/**
- * Hub
- */
-
+// WebSocket connections hub
 type WsHub struct {
-	// Registered connections.
+	// Registered connections
 	connections map[*WsConnection]bool
 
-	// Inbound messages from the connections.
+	// Message broadcasting channel
 	broadcast chan []byte
 
-	// Register requests from the connections.
+	// Connection registration channel
 	register chan *WsConnection
 
-	// Unregister requests from connections.
+	// Connection unregistration channel
 	unregister chan *WsConnection
 }
 
+// Instanciates a new WebSocket hub
 func New() *WsHub {
 	return &WsHub{
 		broadcast:   make(chan []byte),
@@ -57,6 +53,7 @@ func New() *WsHub {
 	}
 }
 
+// Instanciates a new WebSocket hub and run it
 func Run() *WsHub {
 	result := New()
 
@@ -65,17 +62,7 @@ func Run() *WsHub {
 	return result
 }
 
-func (hub *WsHub) RegisterConn(wsConn *websocket.Conn) *WsConnection {
-	conn := &WsConnection{send: make(chan []byte, 256), ws: wsConn}
-	hub.register <- conn
-
-	return conn
-}
-
-func (hub *WsHub) UnregisterConn(conn *WsConnection) {
-	hub.unregister <- conn
-}
-
+// Run hub
 func (hub *WsHub) run() {
 	for {
 		select {
@@ -97,6 +84,20 @@ func (hub *WsHub) run() {
 	}
 }
 
+// Register a new WebSocket connection
+func (hub *WsHub) RegisterConn(wsConn *websocket.Conn) *WsConnection {
+	conn := &WsConnection{send: make(chan []byte, 256), ws: wsConn}
+	hub.register <- conn
+
+	return conn
+}
+
+// Unregister a WebSocket connection
+func (hub *WsHub) UnregisterConn(conn *WsConnection) {
+	hub.unregister <- conn
+}
+
+// Broadcast message to all registered WebSocket connections
 func (hub *WsHub) SendMsg(msg []byte) {
 	hub.broadcast <- msg
 }

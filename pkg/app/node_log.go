@@ -7,6 +7,7 @@ import (
 	log "code.google.com/p/log4go"
 )
 
+// node sensors values logged in database
 type NodeLog struct {
 	Id          int       `json:"id"`
 	NodeId      int       `json:"node_id"`

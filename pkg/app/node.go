@@ -240,7 +240,7 @@ func (node *Node) setSensorRawValue(sensor Sensor, value uint64) {
 	}
 }
 
-// compite temperature value from raw data
+// compute temperature value from raw data
 func (node *Node) computeTemperatureValue(value uint64) float64 {
 	result := int64(value)
 
@@ -252,27 +252,27 @@ func (node *Node) computeTemperatureValue(value uint64) float64 {
 	return math.Ceil(float64(result)) / 10
 }
 
-// compite humidity value from raw data
+// compute humidity value from raw data
 func (node *Node) computeHumidityValue(value uint64) uint8 {
 	return uint8(value)
 }
 
-// compite light value from raw data
+// compute light value from raw data
 func (node *Node) computeLightValue(value uint64) uint8 {
 	return uint8((value * 100) / 255)
 }
 
-// compite motion value from raw data
+// compute motion value from raw data
 func (node *Node) computeMotionValue(value uint64) bool {
 	return (value != 0)
 }
 
-// compite low battery value from raw data
+// compute low battery value from raw data
 func (node *Node) computeLowbatValue(value uint64) bool {
 	return (value != 0)
 }
 
-// compite vcc value from raw data
+// compute vcc value from raw data
 func (node *Node) computeVccValue(value uint64) uint {
 	return uint(value)
 }

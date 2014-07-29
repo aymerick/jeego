@@ -8,14 +8,14 @@ import (
 	log "code.google.com/p/log4go"
 )
 
-// @todo Make that pkg independant from config pkg
-
+// Domoticz server
 type Domoticz struct {
 	Host       string
 	Port       int
 	HardwareId string
 }
 
+// Push data to domoticz server
 //
 // Device can be created dynamically by using those parameters instead of 'idx':
 //  hid: HardwareID
@@ -37,7 +37,6 @@ type Domoticz struct {
 //  ...
 //  dtype: 80   => pTypeTEMP 0x50 (temperature)
 //  dsubtype: 1 => sTypeTEMP1 0x1  //THR128/138,THC138
-//
 func (server *Domoticz) Push(params string) {
 	if server.Host != "" {
 		if params != "" {
