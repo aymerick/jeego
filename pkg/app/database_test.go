@@ -101,29 +101,7 @@ func Test_UpdateNode(t *testing.T) {
 	assert.Equal(t, node3.Vcc, uint(3096))
 }
 
-func Test_InsertLogQuery(t *testing.T) {
-	node := &Node{
-		Id:          2,
-		Kind:        JEENODE_THLM_NODE,
-		UpdatedAt:   time.Now().UTC(),
-		LastSeenAt:  time.Now().UTC(),
-		Temperature: float64(21.3),
-		Humidity:    uint8(74),
-		Light:       uint8(61),
-		Motion:      true,
-		LowBattery:  false,
-	}
-
-	expected_query := "INSERT INTO logs(node_id, at, temperature, humidity, light, motion, lowbat) VALUES(?, ?, ?, ?, ?, ?, ?)"
-	expected_args := []interface{}{node.Id, node.LastSeenAt.Unix(), float64(21.3), uint8(74), uint8(61), true, false}
-
-	dbQuery := insertLogQuery(node)
-
-	assert.Equal(t, dbQuery.query, expected_query)
-	assert.True(t, reflect.DeepEqual(dbQuery.args, expected_args))
-}
-
-func Test_InsertLogs(t *testing.T) {
+func Test_InsertNodeLogs(t *testing.T) {
 	destroyDatabase(nil)
 	db := newDatabase()
 	defer destroyDatabase(db)
@@ -142,6 +120,6 @@ func Test_InsertLogs(t *testing.T) {
 	node3.Temperature = float64(19.4)
 	node3.Vcc = 3096
 
-	db.insertLogs()
+	db.insertNodeLogs()
 	// @todo Check that logs are correctly inserted in database
 }
