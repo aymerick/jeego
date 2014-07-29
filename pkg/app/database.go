@@ -44,15 +44,18 @@ var ColNameForSensor map[Sensor]string
 
 // Database
 type Database struct {
+	filePath    string
 	driver      *sql.DB
 	queryWriter chan *DatabaseQuery
 	nodes       []*Node
+	sync        bool
 }
 
 // Database Query
 type DatabaseQuery struct {
-	query string
-	args  []interface{}
+	query    string
+	args     []interface{}
+	doneChan chan bool
 }
 
 // Init
@@ -75,7 +78,7 @@ func LoadDatabase(databasePath string) (*Database, error) {
 		return nil, err
 	}
 
-	db := Database{driver: sqlDriver}
+	db := Database{filePath: databasePath, driver: sqlDriver, sync: false}
 
 	// create tables if necessary
 	db.createTables()
@@ -89,6 +92,10 @@ func LoadDatabase(databasePath string) (*Database, error) {
 	return &db, nil
 }
 
+func (db *Database) SetSync(val bool) {
+	db.sync = val
+}
+
 // Start RF12demo handler
 func (db *Database) runQueryWriter() {
 	inputChan := make(chan *DatabaseQuery)
@@ -100,11 +107,15 @@ func (db *Database) runQueryWriter() {
 		for {
 			dbQuery = <-inputChan
 
-			// log.Debug("Exec DB write query: %s / %v", dbQuery.query, dbQuery.args)
+			log.Debug("Exec DB write query: %s / %v", dbQuery.query, dbQuery.args)
 
 			_, err := db.driver.Exec(dbQuery.query, dbQuery.args...)
 			if err != nil {
 				panic(log.Critical(err))
+			}
+
+			if dbQuery.doneChan != nil {
+				dbQuery.doneChan <- true
 			}
 		}
 	}()
@@ -113,7 +124,16 @@ func (db *Database) runQueryWriter() {
 }
 
 func (db *Database) writeQuery(dbQuery *DatabaseQuery) {
+	if db.sync {
+		dbQuery.doneChan = make(chan bool)
+	}
+
 	db.queryWriter <- dbQuery
+
+	if db.sync {
+		// Wait for write completion
+		<-dbQuery.doneChan
+	}
 }
 
 func (db *Database) close() {

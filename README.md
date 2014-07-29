@@ -48,6 +48,15 @@ $ ./jeego
 ```
 
 
+Test
+====
+
+```bash
+$ cd ~/Dev/go/src/github.com/aymerick/jeego
+go test ./...
+```
+
+
 Conf file
 =========
 
