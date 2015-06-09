@@ -3,6 +3,8 @@ jeego
 
 House monitoring with Jeenode/TinyTX sensors and Go lang.
 
+![Jeego Logo](https://github.com/aymerick/jeego/blob/master/jeego.png?raw=true "Jeego")
+
 
 Install
 =======
